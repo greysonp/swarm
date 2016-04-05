@@ -2,74 +2,130 @@ pico-8 cartridge // http://www.pico-8.com
 version 5
 __lua__
 
+stage = {}
 cursor = {}
-cursor.x = 32
-cursor.y = 32
-cursor.speed = 1;
-
 bees = {}
+NUM_BEES = 7
 
 function _init()
   -- Switch to 64x64 mode
   poke(0x5f2c,3)
   cls()
-  for i = 1, 7 do
-    add(bees, newBee(rnd(64), rnd(64)))
+
+  -- Add bees to the stage
+  for i = 1, NUM_BEES do
+    local bee = newBee(rnd(64), rnd(64))
+    add(bees, bee)
+    add(stage, bee)
   end
+
+  -- Add cursor to the stage
+  cursor = newCursor(32, 32)
+  add(stage, cursor)
 end
 
 function _update()
   -- Cursor movement
-  if btn(0) then cursor.x -= cursor.speed end
-  if btn(1) then cursor.x += cursor.speed end
-  if btn(2) then cursor.y -= cursor.speed end
-  if btn(3) then cursor.y += cursor.speed end
+  cursor.vel.x = 0
+  cursor.vel.y = 0
+  if btn(0) then cursor.vel.x = -cursor.speed end
+  if btn(1) then cursor.vel.x = cursor.speed end
+  if btn(2) then cursor.vel.y = -cursor.speed end
+  if btn(3) then cursor.vel.y = cursor.speed end
 
   -- Position the bees
   foreach(bees, function(bee)
-    local dx = cursor.x - bee.x
-    local dy = cursor.y - bee.y
+    local d = cursor.pos:sub(bee.pos)
+    local rads = atan2(d.x, d.y)
 
-    local rads = atan2(dx, dy)
-    bee.vx += cos(rads) * bee.speed
-    bee.vy += sin(rads) * bee.speed
+    bee.vel.x += cos(rads) * bee.speed
+    bee.vel.y += sin(rads) * bee.speed
 
-    local beeSpeed = sqrt(bee.vx * bee.vx + bee.vy * bee.vy)
+    local beeSpeed = sqrt(bee.vel.x * bee.vel.x + bee.vel.y * bee.vel.y)
     if beeSpeed > bee.maxSpeed then
-      bee.vx += cos(rads) * bee.maxSpeed
-      bee.vy += sin(rads) * bee.maxSpeed
+      bee.vel.x = cos(rads) * bee.maxSpeed
+      bee.vel.y = sin(rads) * bee.maxSpeed
     end
+  end)
 
-    local dist = sqrt(dx * dx + dy * dy)
-    local friction = .95
-    if dist > 10 then friction = 1 end
-
-    bee.vx *= friction
-    bee.vy *= friction
-
-    bee.x += bee.vx
-    bee.y += bee.vy
+  -- Update all of the object's positions
+  foreach(stage, function(obj)
+    obj.pos.x += obj.vel.x
+    obj.pos.y += obj.vel.y
   end)
 
 end
 
 function _draw()
+  -- Paint background
   rectfill(0, 0, 64, 64, 1)
-  spr(0, cursor.x - 1, cursor.y - 1)
-  foreach(bees, function(bee)
-    pset(bee.x, bee.y, 10)
+
+  -- Draw all items on the stage
+  foreach(stage, function(obj)
+    obj:draw()
   end)
 end
 
+function newGameObj()
+  local obj = {}
+  obj.pos = newVector(0, 0)
+  obj.vel = newVector(0, 0)
+  return obj
+end
+
+function newCursor(x, y)
+  local cursor = newGameObj()
+  cursor.pos.x = x
+  cursor.pos.y = y
+  cursor.speed = 1
+
+  function cursor:draw()
+    spr(0, self.pos.x -1, self.pos.y - 1)
+  end
+
+  return cursor
+end
+
 function newBee(x, y)
-  local bee = {}
-  bee.x = x
-  bee.y = y
-  bee.speed = 0.05
-  bee.maxSpeed = 0.3
-  bee.vx = 0
-  bee.vy = 0
+  local bee = newGameObj()
+  bee.pos.x = x
+  bee.pos.y = y
+  bee.speed = 0.1
+  bee.maxSpeed = 1
+  bee.vel.x = 0
+  bee.vel.y = 0
+
+  function bee:draw()
+    pset(self.pos.x, self.pos.y, 10)
+  end
+
   return bee
+end
+
+function newVector(x, y)
+  local vec = {}
+  vec.x = x
+  vec.y = y
+
+  function vec:add(v)
+    return newVector(self.x + v.x, self.y + v.y)
+  end
+
+  function vec:sub(v)
+    return newVector(self.x - v.x, self.y - v.y)
+  end
+
+  function vec:mag()
+    return sqrt(self.x * self.x + self.y * self.y)
+  end
+
+  function vec:norm()
+    local mag = self:mag(vec)
+    self.x = self.x / mag
+    self.y = self.y / mag
+  end
+
+  return vec
 end
 
 __gfx__
