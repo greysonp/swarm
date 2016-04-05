@@ -25,31 +25,9 @@ function _init()
 end
 
 function _update()
-  -- Cursor movement
-  cursor.vel.x = 0
-  cursor.vel.y = 0
-  if btn(0) then cursor.vel.x = -cursor.speed end
-  if btn(1) then cursor.vel.x = cursor.speed end
-  if btn(2) then cursor.vel.y = -cursor.speed end
-  if btn(3) then cursor.vel.y = cursor.speed end
-
-  -- Position the bees
-  foreach(bees, function(bee)
-    local d = cursor.pos:sub(bee.pos)
-    local rads = atan2(d.x, d.y)
-
-    bee.vel.x += cos(rads) * bee.speed
-    bee.vel.y += sin(rads) * bee.speed
-
-    local beeSpeed = sqrt(bee.vel.x * bee.vel.x + bee.vel.y * bee.vel.y)
-    if beeSpeed > bee.maxSpeed then
-      bee.vel.x = cos(rads) * bee.maxSpeed
-      bee.vel.y = sin(rads) * bee.maxSpeed
-    end
-  end)
-
   -- Update all of the object's positions
   foreach(stage, function(obj)
+    obj:update()
     obj.pos.x += obj.vel.x
     obj.pos.y += obj.vel.y
   end)
@@ -66,6 +44,10 @@ function _draw()
   end)
 end
 
+
+-- ============================
+-- CLASSES
+-- ============================
 function newGameObj()
   local obj = {}
   obj.pos = newVector(0, 0)
@@ -78,6 +60,15 @@ function newCursor(x, y)
   cursor.pos.x = x
   cursor.pos.y = y
   cursor.speed = 1
+
+  function cursor:update()
+    self.vel.x = 0
+    self.vel.y = 0
+    if btn(0) then self.vel.x = -self.speed end
+    if btn(1) then self.vel.x = self.speed end
+    if btn(2) then self.vel.y = -self.speed end
+    if btn(3) then self.vel.y = self.speed end
+  end
 
   function cursor:draw()
     spr(0, self.pos.x -1, self.pos.y - 1)
@@ -94,6 +85,20 @@ function newBee(x, y)
   bee.maxSpeed = 1
   bee.vel.x = 0
   bee.vel.y = 0
+
+  function bee:update()
+    local d = cursor.pos:sub(self.pos)
+    local rads = atan2(d.x, d.y)
+
+    self.vel.x += cos(rads) * self.speed
+    self.vel.y += sin(rads) * self.speed
+
+    local selfSpeed = sqrt(self.vel.x * self.vel.x + self.vel.y * self.vel.y)
+    if selfSpeed > self.maxSpeed then
+      self.vel.x = cos(rads) * self.maxSpeed
+      self.vel.y = sin(rads) * self.maxSpeed
+    end
+  end
 
   function bee:draw()
     pset(self.pos.x, self.pos.y, 10)
