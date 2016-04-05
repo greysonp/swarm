@@ -92,6 +92,10 @@ function newcursor(x, y)
     spr(0, self.pos.x -1, self.pos.y - 1)
   end
 
+  function cursor:getcenter()
+    return self.pos:add(newvector(1, 1))
+  end
+
   return cursor
 end
 
@@ -133,12 +137,13 @@ function newbee(x, y)
   end
 
   function bee:target(t)
-    -- account for visual center being different from registration point
-    local diff = t.pos:sub(self.pos)
+    local diff = t:getcenter():sub(self.pos)
     local rads = atan2(diff.x, diff.y)
 
     local tvec = newvector(cos(rads), sin(rads))
     tvec:norm()
+    tvec:div(tvec:mag())
+
     return tvec
   end
 
@@ -235,6 +240,10 @@ function newenemy(x, y)
 
   function enemy:draw()
     pset(self.pos.x, self.pos.y, 8)
+  end
+
+  function enemy:getcenter()
+    return self.pos
   end
 
   return enemy
