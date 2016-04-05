@@ -97,31 +97,55 @@ function newbee(x, y)
   bee.vision = 5
 
   function bee:update()
-    local d = cursor.pos:sub(self.pos)
-    local rads = atan2(d.x, d.y)
 
-    self.vel.x += cos(rads) * self.speed
-    self.vel.y += sin(rads) * self.speed
+    local target = self:target():mult(0.5)
+    local separation = self:separation():mult(1)
+    local alignment = self:alignment():mult(1)
+    local cohesion = self:cohesion():mult(1)
 
-    local currspeed = sqrt(self.vel.x * self.vel.x + self.vel.y * self.vel.y)
+    self.vel = self.vel:add(target):add(separation):add(alignment):add(cohesion)
+
+    -- Keep everything under a maximum speed
+    local currspeed = self.vel:mag()
     if currspeed > self.maxspeed then
+      local rads = atan2(self.vel.x, self.vel.y)
       self.vel.x = cos(rads) * self.maxspeed
       self.vel.y = sin(rads) * self.maxspeed
     end
-
-    -- avoidance
-    local threat = self:findthreat()
-    if threat != nil then
-      local diff = self.pos:sub(threat.pos)
-      diff:norm()
-      diff = diff:div(2)
-      self.vel = self.vel:add(diff)
-    end
-
   end
 
   function bee:draw()
     pset(self.pos.x, self.pos.y, 10)
+  end
+
+  function bee:target()
+    local diff = cursor.pos:sub(self.pos)
+    local rads = atan2(diff.x, diff.y)
+
+    local tvec = newvector(0, 0)
+    tvec.x = cos(rads)
+    tvec.y = sin(rads)
+    tvec:norm()
+    return tvec
+  end
+
+  function bee:separation()
+    local threat = self:findthreat()
+    if threat != nil then
+      local diff = self.pos:sub(threat.pos)
+      diff:norm()
+      return diff
+    else
+      return newvector(0, 0)
+    end
+  end
+
+  function bee:alignment()
+    return newvector(0, 0)
+  end
+
+  function bee:cohesion()
+    return newvector(0, 0)
   end
 
   function bee:findthreat()
@@ -138,6 +162,20 @@ function newbee(x, y)
       end
     end
     return threat
+  end
+
+  function bee:findneighbords()
+    local neighbors = {}
+
+    for bee in all(bees) do
+      if bee != self then
+        local dist = self:dist(bee)
+        if dist <= self.vision then
+          add(neighbors, bee)
+        end
+      end
+    end
+    return neighbors
   end
 
   return bee
