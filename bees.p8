@@ -5,7 +5,10 @@ __lua__
 stage = {}
 cursor = {}
 bees = {}
-num_bees = 7
+beetargets = {}
+num_bees = 10
+
+enemy = {}
 
 flag = false
 
@@ -24,6 +27,11 @@ function _init()
   -- add cursor to the stage
   cursor = newcursor(32, 32)
   add(stage, cursor)
+  add(beetargets, cursor)
+
+  enemy = newenemy(45, 45)
+  add(stage, enemy)
+  add(beetargets, enemy)
 end
 
 function _update()
@@ -69,6 +77,7 @@ function newcursor(x, y)
   cursor.pos.x = x
   cursor.pos.y = y
   cursor.speed = 1
+  cursor.attraction = 0.5
 
   function cursor:update()
     self.vel.x = 0
@@ -90,22 +99,27 @@ function newbee(x, y)
   local bee = newgameobj()
   bee.pos.x = x
   bee.pos.y = y
-  bee.speed = 0.2
-  bee.maxspeed = 2
+  bee.maxspeed = 1.75
   bee.vel.x = 0
   bee.vel.y = 0
   bee.vision = 5
 
   function bee:update()
+    -- move towards all targets
+    local target = newvector(0, 0)
+    for bt in all(beetargets) do
+      target = target:add(self:target(bt):mult(bt.attraction))
+    end
 
-    local target = self:target():mult(0.5)
-    local separation = self:separation():mult(1)
-    local alignment = self:alignment():mult(1)
-    local cohesion = self:cohesion():mult(1)
+    -- implement the traditional swarming algorithm
+    -- http://processingjs.org/learning/topic/flocking/
+    local separation = self:separation():mult(0.5)
+    local alignment = self:alignment():mult(0.25)
+    local cohesion = self:cohesion():mult(0.5)
 
     self.vel = self.vel:add(target):add(separation):add(alignment):add(cohesion)
 
-    -- Keep everything under a maximum speed
+    -- keep everything under a maximum speed
     local currspeed = self.vel:mag()
     if currspeed > self.maxspeed then
       local rads = atan2(self.vel.x, self.vel.y)
@@ -118,13 +132,12 @@ function newbee(x, y)
     pset(self.pos.x, self.pos.y, 10)
   end
 
-  function bee:target()
-    local diff = cursor.pos:sub(self.pos)
+  function bee:target(t)
+    -- account for visual center being different from registration point
+    local diff = t.pos:sub(self.pos)
     local rads = atan2(diff.x, diff.y)
 
-    local tvec = newvector(0, 0)
-    tvec.x = cos(rads)
-    tvec.y = sin(rads)
+    local tvec = newvector(cos(rads), sin(rads))
     tvec:norm()
     return tvec
   end
@@ -141,11 +154,40 @@ function newbee(x, y)
   end
 
   function bee:alignment()
-    return newvector(0, 0)
+    local neighbors = self:findneighbors()
+    local sum = newvector(0, 0)
+    local count = 0
+    for bee in all(neighbors) do
+      sum = sum:add(bee.vel)
+      count += 1
+    end
+    if count > 0 then
+      local avg = sum:div(count)
+      avg:norm()
+      return avg
+    else
+      return newvector(0, 0)
+    end
   end
 
   function bee:cohesion()
-    return newvector(0, 0)
+    local neighbors = self:findneighbors()
+    local sum = newvector(0, 0)
+    local count = 0
+    for bee in all(neighbors) do
+      sum = sum:add(bee.pos)
+      count += 1
+    end
+    if count > 0 then
+      local avg = sum:div(count)
+      local diff = self.vel:sub(avg)
+      local rads = atan2(diff.x, diff.y)
+      local vec = newvector(cos(rads), sin(rads))
+      vec:norm()
+      return vec
+    else
+      return newvector(0, 0)
+    end
   end
 
   function bee:findthreat()
@@ -164,7 +206,7 @@ function newbee(x, y)
     return threat
   end
 
-  function bee:findneighbords()
+  function bee:findneighbors()
     local neighbors = {}
 
     for bee in all(bees) do
@@ -179,6 +221,23 @@ function newbee(x, y)
   end
 
   return bee
+end
+
+function newenemy(x, y)
+  local enemy = newgameobj()
+  enemy.pos.x = x
+  enemy.pos.y = y
+  enemy.attraction = 0.6
+
+  function enemy:update()
+    -- do something
+  end
+
+  function enemy:draw()
+    pset(self.pos.x, self.pos.y, 8)
+  end
+
+  return enemy
 end
 
 function newvector(x, y)
