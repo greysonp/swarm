@@ -11,6 +11,7 @@ num_bees = 10
 enemy = {}
 
 flag = false
+debugtext = nil
 
 function _init()
   -- switch to 64x64 mode
@@ -27,7 +28,6 @@ function _init()
   -- add cursor to the stage
   cursor = newcursor(32, 32)
   add(stage, cursor)
-  add(beetargets, cursor)
 
   enemy = newenemy(45, 45)
   add(stage, enemy)
@@ -53,7 +53,10 @@ function _draw()
     obj:draw()
   end)
 
-  if flag then pset(0, 0, 8) end
+  if flag then pset(0, 64, 8) end
+  if debugtext != nil then
+    print(debugtext, 0, 0)
+  end
 end
 
 
@@ -77,7 +80,6 @@ function newcursor(x, y)
   cursor.pos.x = x
   cursor.pos.y = y
   cursor.speed = 1
-  cursor.attraction = 0.5
 
   function cursor:update()
     self.vel.x = 0
@@ -107,6 +109,7 @@ function newbee(x, y)
   bee.vel.x = 0
   bee.vel.y = 0
   bee.vision = 5
+  bee.targetvision = 10
 
   function bee:update()
     -- move towards all targets
@@ -114,6 +117,7 @@ function newbee(x, y)
     for bt in all(beetargets) do
       target = target:add(self:target(bt):mult(bt.attraction))
     end
+    local targetcursor = self:targetcursor()
 
     -- implement the traditional swarming algorithm
     -- http://processingjs.org/learning/topic/flocking/
@@ -121,7 +125,7 @@ function newbee(x, y)
     local alignment = self:alignment():mult(0.25)
     local cohesion = self:cohesion():mult(0.5)
 
-    self.vel = self.vel:add(target):add(separation):add(alignment):add(cohesion)
+    self.vel = self.vel:add(target):add(targetcursor):add(separation):add(alignment):add(cohesion)
 
     -- keep everything under a maximum speed
     local currspeed = self.vel:mag()
@@ -140,10 +144,33 @@ function newbee(x, y)
     local diff = t:getcenter():sub(self.pos)
     local rads = atan2(diff.x, diff.y)
 
-    local tvec = newvector(cos(rads), sin(rads))
-    tvec:norm()
-    tvec:div(tvec:mag())
+    if diff:mag() <= self.targetvision then
+      local tvec = newvector(cos(rads), sin(rads))
+      tvec:norm()
+      return tvec
+    else
+      return newvector(0, 0)
+    end
+  end
 
+  function bee:targetcursor()
+    local diff = cursor:getcenter():sub(self.pos)
+    local rads = atan2(diff.x, diff.y)
+    local tvec = newvector(cos(rads), sin(rads))
+
+    local dist = diff:mag()
+    -- keep bees from wandering
+    if dist > 20 then
+      self.pos.x = cursor:getcenter().x - (tvec.x * dist)
+      self.pos.y = cursor:getcenter().y - (tvec.y * dist)
+      self.vel.x = 0
+      self.vel.y = 0
+    end
+
+    tvec:norm()
+
+    -- make strength of pull strong the further away the bee is from the cursor
+    tvec:mult(dist * dist * 0.3)
     return tvec
   end
 
@@ -232,7 +259,7 @@ function newenemy(x, y)
   local enemy = newgameobj()
   enemy.pos.x = x
   enemy.pos.y = y
-  enemy.attraction = 0.6
+  enemy.attraction = 1
 
   function enemy:update()
     -- do something
