@@ -105,11 +105,16 @@ function newbee(x, y)
   local bee = newgameobj()
   bee.pos.x = x
   bee.pos.y = y
-  bee.maxspeed = 1.75
+  bee.maxspeed = 2.5
   bee.vel.x = 0
   bee.vel.y = 0
   bee.vision = 5
   bee.targetvision = 10
+  bee.minelevation = 2
+  bee.maxelevation = 5
+  bee.elevation = rnd(bee.maxelevation + bee.minelevation) + bee.minelevation
+  bee.targetelevation = rnd(bee.maxelevation + bee.minelevation) + bee.minelevation
+
 
   function bee:update()
     -- move towards all targets
@@ -134,10 +139,23 @@ function newbee(x, y)
       self.vel.x = cos(rads) * self.maxspeed
       self.vel.y = sin(rads) * self.maxspeed
     end
+
+    -- adjust elevation
+    local ediff = self.targetelevation - self.elevation
+    if abs(ediff) > 0.1 then
+      self.elevation += ediff * 0.15
+    else
+      self.targetelevation = rnd(self.maxelevation + self.minelevation) + self.minelevation
+    end
   end
 
   function bee:draw()
-    pset(self.pos.x, self.pos.y, 10)
+    -- draw shadow at actual position (so the shadow is stable on the ground), but offset it by a little so the yellow
+    -- pixel doesn't seem so far from the actual programmatic position
+    pset(self.pos.x, self.pos.y + self.minelevation, 3)
+
+    -- draw the yellow bit where the bee is, taking elevation into account
+    pset(self.pos.x, self.pos.y - self.elevation + self.minelevation, 10)
   end
 
   function bee:target(t)
@@ -314,12 +332,12 @@ end
 
 __gfx__
 07000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000000000000000000000000000000000000000000000000000
-77700000bbbbbbbbbb222bbbbebebebbbbbbb3bbbbbbbbbb00000000000000000000000000000000000000000000000000000000000000000000000000000000
-07000000bb3bbbbbbb2a2bbbbeeeeebbb3bbbbbbbbbbbb3b00000000000000000000000000000000000000000000000000000000000000000000000000000000
+77700000bbbbbbbbbb222bbbbebebebbbbbbbbbbbbbbbbbb00000000000000000000000000000000000000000000000000000000000000000000000000000000
+07000000bbbbbbbbbb2a2bbbbeeeeebbb3bbbbbbbbbbbbbb00000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000bbbbbbbbbb222bbbbbeeebbbb33bbbbbbbbbbbbb00000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000bbbbbbbbbbb3bbbbbbb3bbbbbb3b3bbbbbbbbbbb00000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000bbbbb3bbbb33bbbbbbb33bbbbb33bbbbb3bbbbbb00000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000bbbbbbbbbbb3bbbbbbb3bbbbbbb3bb3bbbbbbbbb00000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000bbbbbbbbbb33bbbbbbb33bbbbb33bbbbbbbbbbbb00000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000bbbbbbbbbbb3bbbbbbb3bbbbbbb3bbbbbbbbbbbb00000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
