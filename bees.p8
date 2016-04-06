@@ -303,8 +303,10 @@ function newvector(x, y)
 
   function vec:norm()
     local mag = self:mag(vec)
-    self.x = self.x / mag
-    self.y = self.y / mag
+    if mag != 0 then
+      self.x = self.x / mag
+      self.y = self.y / mag
+    end
   end
 
   return vec
