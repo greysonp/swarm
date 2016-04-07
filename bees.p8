@@ -130,7 +130,10 @@ function newbee(x, y)
     local alignment = self:alignment():mult(0.25)
     local cohesion = self:cohesion():mult(0.5)
 
-    self.vel = self.vel:add(target):add(targetcursor):add(separation):add(alignment):add(cohesion)
+    -- there's a weird bias towards the top left of the cursor. this is a little hack to reduce it.
+    local removebias = newvector(.15, .15)
+
+    self.vel = self.vel:add(target):add(targetcursor):add(separation):add(alignment):add(cohesion):add(removebias)
 
     -- keep everything under a maximum speed
     local currspeed = self.vel:mag()
