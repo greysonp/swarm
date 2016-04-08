@@ -23,19 +23,15 @@ function _init()
   -- init camera state
   cam = newvector(0, 0)
 
-  -- add bees to the stage
-  for i = 1, startbees do
-    local bee = newbee(rnd(64), rnd(64))
-    addbee(bee)
-  end
-
   -- add cursor to the stage
   cursor = newcursor(32, 32)
   add(stage, cursor)
 
-  enemy = newenemy(45, 45)
-  add(stage, enemy)
-  add(beetargets, enemy)
+  -- add bees to the stage
+  for i = 1, startbees do
+    local bee = newbee(rnd(64), rnd(64), cursor)
+    addbee(bee)
+  end
 end
 
 function _update()
@@ -76,6 +72,7 @@ function _draw()
 end
 
 function addbee(bee)
+  add(bee.anchor.bees, bee)
   add(bees, bee)
   add(stage, bee)
 end
@@ -91,10 +88,9 @@ function placeanchor(x, y)
   end)
   if closest == nil then
     closest = newanchor(x, y)
+    add(anchors, closest)
+    add(stage, closest)
   end
-
-  add(anchors, closest)
-  add(stage, closest)
 
   return closest
 end
@@ -106,7 +102,9 @@ function removeanchor(x, y)
   if closest != nil then
     del(anchors, closest)
     del(stage, closest)
+    return closest
   end
+  return nil
 end
 
 function findclosest(coll, x, y, cond)
@@ -143,13 +141,12 @@ function newgameobj()
 end
 
 function newcursor(x, y)
-  local cursor = newgameobj()
-  cursor.pos.x = x
-  cursor.pos.y = y
+  local cursor = newanchor(x, y)
   cursor.speed = 1
   cursor.radius = 10
 
   function cursor:update()
+    -- movement
     self.vel.x = 0
     self.vel.y = 0
     if btn(0) then self.vel.x = -self.speed end
@@ -157,8 +154,25 @@ function newcursor(x, y)
     if btn(2) then self.vel.y = -self.speed end
     if btn(3) then self.vel.y = self.speed end
 
-    if btnp(4) then placeanchor(self.pos.x, self.pos.y) end
-    if btnp(5) then removeanchor(self.pos.x, self.pos.y) end
+    -- add anchor
+    if btnp(4) then
+      if count(self.bees) > 0 then
+        local anchor = placeanchor(self.pos.x, self.pos.y)
+        local bee = findclosest(self.bees, self.pos.x, self.pos.y, function(obj, dist) return true end)
+        bee:setanchor(anchor)
+      end
+    end
+
+    -- remove anchor
+    if btnp(5) then
+      local anchor = removeanchor(self.pos.x, self.pos.y)
+      if anchor != nil then
+        flag = true
+        for bee in all(anchor.bees) do
+          bee:setanchor(cursor)
+        end
+      end
+    end
 
     local newpos = self.pos:add(self.vel)
     if newpos.x < 0 or newpos.x > 128 then self.vel.x = 0 end
@@ -181,6 +195,7 @@ function newanchor(x, y)
   anchor.pos.x = x
   anchor.pos.y = y
   anchor.radius = 10
+  anchor.bees = {}
 
   function anchor:update()
   end
@@ -193,7 +208,7 @@ function newanchor(x, y)
   return anchor
 end
 
-function newbee(x, y)
+function newbee(x, y, anchor)
   local bee = newgameobj()
   bee.pos.x = x
   bee.pos.y = y
@@ -206,7 +221,7 @@ function newbee(x, y)
   bee.maxelevation = 5
   bee.elevation = random(bee.minelevation, bee.maxelevation)
   bee.targetelevation = random(bee.minelevation, bee.maxelevation)
-
+  bee.anchor = anchor
 
   function bee:update()
     -- move towards all targets
@@ -214,7 +229,7 @@ function newbee(x, y)
     for bt in all(beetargets) do
       target = target:add(self:target(bt):mult(bt.attraction))
     end
-    local targetcursor = self:targetanchor()
+    local targetanchor = self:targetanchor()
 
     -- implement the traditional swarming algorithm
     -- http://processingjs.org/learning/topic/flocking/
@@ -225,7 +240,7 @@ function newbee(x, y)
     -- there's a weird bias towards the top left of the cursor. this is a little hack to reduce it.
     local removebias = newvector(.15, .15)
 
-    self.vel = self.vel:add(target):add(targetcursor):add(separation):add(alignment):add(cohesion):add(removebias)
+    self.vel = self.vel:add(target):add(targetanchor):add(separation):add(alignment):add(cohesion):add(removebias)
 
     -- keep everything under a maximum speed
     local currspeed = self.vel:mag()
@@ -267,15 +282,15 @@ function newbee(x, y)
   end
 
   function bee:targetanchor()
-    local diff = cursor:getcenter():sub(self.pos)
+    local diff = self.anchor.pos:sub(self.pos)
     local rads = atan2(diff.x, diff.y)
     local tvec = newvector(cos(rads), sin(rads))
 
     local dist = diff:mag()
     -- keep bees from wandering
     if dist > 20 then
-      self.pos.x = cursor:getcenter().x - (tvec.x * dist)
-      self.pos.y = cursor:getcenter().y - (tvec.y * dist)
+      self.pos.x = self.anchor.pos.x - (tvec.x * dist)
+      self.pos.y = self.anchor.pos.y - (tvec.y * dist)
       self.vel.x = 0
       self.vel.y = 0
     end
@@ -363,6 +378,12 @@ function newbee(x, y)
       end
     end
     return neighbors
+  end
+
+  function bee:setanchor(anchor)
+    del(self.anchor.bees, self)
+    add(anchor.bees, self)
+    self.anchor = anchor
   end
 
   return bee
