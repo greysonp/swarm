@@ -201,8 +201,7 @@ function newanchor(x, y)
   end
 
   function anchor:draw()
-    pset(self.pos.x, self.pos.y, 2)
-    circ(self.pos.x, self.pos.y, self.radius, 2)
+    circ(self.pos.x, self.pos.y, self.radius, 3)
   end
 
   return anchor
