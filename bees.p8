@@ -69,7 +69,7 @@ function _draw()
     obj:draw()
   end)
 
-  if flag then pset(0, 64, 8) end
+  if flag then pset(0, 63, 8) end
   if debugtext != nil then
     print(debugtext, 0, 0)
   end
@@ -84,6 +84,44 @@ function addenemy(enemy)
   add(enemies, enemy)
   add(stage, enemy)
 end
+
+function placeanchor(x, y)
+  local closest = findclosest(anchors, x, y, function(obj, dist)
+    return dist <= obj.radius
+  end)
+  if closest == nil then
+    closest = newanchor(x, y)
+  end
+
+  add(anchors, closest)
+  add(stage, closest)
+
+  return closest
+end
+
+function removeanchor(x, y)
+  local closest = findclosest(anchors, x, y, function(obj, dist)
+    return dist <= obj.radius
+  end)
+  if closest != nil then
+    del(anchors, closest)
+    del(stage, closest)
+  end
+end
+
+function findclosest(coll, x, y, cond)
+  local closest = nil
+  local closestdist = 32000
+  for obj in all(coll) do
+    local diff = obj.pos:sub(newvector(x, y))
+    local dist = diff:mag()
+    if dist < closestdist and cond(obj, dist) then
+      closest = obj
+    end
+  end
+  return closest
+end
+
 
 function random(min, max)
   return rnd(max - min) + min
@@ -119,6 +157,9 @@ function newcursor(x, y)
     if btn(2) then self.vel.y = -self.speed end
     if btn(3) then self.vel.y = self.speed end
 
+    if btnp(4) then placeanchor(self.pos.x, self.pos.y) end
+    if btnp(5) then removeanchor(self.pos.x, self.pos.y) end
+
     local newpos = self.pos:add(self.vel)
     if newpos.x < 0 or newpos.x > 128 then self.vel.x = 0 end
     if newpos.y < 0 or newpos.y > 128 then self.vel.y = 0 end
@@ -133,6 +174,23 @@ function newcursor(x, y)
   end
 
   return cursor
+end
+
+function newanchor(x, y)
+  local anchor = newgameobj()
+  anchor.pos.x = x
+  anchor.pos.y = y
+  anchor.radius = 10
+
+  function anchor:update()
+  end
+
+  function anchor:draw()
+    pset(self.pos.x, self.pos.y, 2)
+    circ(self.pos.x, self.pos.y, self.radius, 2)
+  end
+
+  return anchor
 end
 
 function newbee(x, y)
