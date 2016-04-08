@@ -4,30 +4,29 @@ __lua__
 stage = {}
 cursor = {}
 bees = {}
-beetargets = {}
-num_bees = 10
+enemies = {}
+anchors = {}
 
-cam = {}
+startbees = 10
+
+cam = {} -- need global position state for smoothing
 camlag = .07 -- constant we use as 't' in low-pass filter calculation
-
-enemy = {}
 
 flag = false
 debugtext = nil
 
 function _init()
   -- switch to 64x64 mode
-  poke(0x5f2c,3)
+  poke(0x5f2c, 3)
   cls()
 
   -- init camera state
   cam = newvector(0, 0)
 
   -- add bees to the stage
-  for i = 1, num_bees do
+  for i = 1, startbees do
     local bee = newbee(rnd(64), rnd(64))
-    add(bees, bee)
-    add(stage, bee)
+    addbee(bee)
   end
 
   -- add cursor to the stage
@@ -76,6 +75,19 @@ function _draw()
   end
 end
 
+function addbee(bee)
+  add(bees, bee)
+  add(stage, bee)
+end
+
+function addenemy(enemy)
+  add(enemies, enemy)
+  add(stage, enemy)
+end
+
+function random(min, max)
+  return rnd(max - min) + min
+end
 
 -- ============================
 -- classes
@@ -132,10 +144,10 @@ function newbee(x, y)
   bee.vel.y = 0
   bee.vision = 5
   bee.targetvision = 10
-  bee.minelevation = 2
+  bee.minelevation = 1
   bee.maxelevation = 5
-  bee.elevation = rnd(bee.maxelevation + bee.minelevation) + bee.minelevation
-  bee.targetelevation = rnd(bee.maxelevation + bee.minelevation) + bee.minelevation
+  bee.elevation = random(bee.minelevation, bee.maxelevation)
+  bee.targetelevation = random(bee.minelevation, bee.maxelevation)
 
 
   function bee:update()
@@ -170,7 +182,7 @@ function newbee(x, y)
     if abs(ediff) > 0.1 then
       self.elevation += ediff * 0.15
     else
-      self.targetelevation = rnd(self.maxelevation + self.minelevation) + self.minelevation
+      self.targetelevation = random(self.minelevation, self.maxelevation)
     end
   end
 
