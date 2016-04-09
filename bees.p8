@@ -15,6 +15,12 @@ anchors = {}
 -- constants
 startbees = 10
 camlag = .07 -- constant we use as 't' in low-pass filter calculation
+beehive_layer = 1
+anchor_layer = beehive_layer + 1
+enemy_layer = beehive_layer + 1
+bee_layer = enemy_layer + 1
+cursor_layer = bee_layer + 1
+hud_layer = cursor_layer + 1
 
 -- debug elements
 flag = false
@@ -76,10 +82,19 @@ function _draw()
   -- draw map
   map(0, 0, 0, 0, 16, 16)
 
-  -- draw all items on the stage
-  foreach(stage, function(obj)
-    obj:draw()
-  end)
+  -- construct a mapping of each object to it's layer
+  local layers = {}
+  for obj in all(stage) do
+    if layers[obj.layer] == nil then layers[obj.layer] = {} end
+    add(layers[obj.layer], obj)
+  end
+
+  -- draw all the object, layer by layer
+  for layer in all(layers) do
+    for obj in all(layer) do
+      obj:draw()
+    end
+  end
 
   if flag then pset(63, 0, 8) end
   if debugtext != nil then
@@ -150,6 +165,7 @@ function newgameobj()
   local obj = {}
   obj.pos = newvector(0, 0)
   obj.vel = newvector(0, 0)
+  obj.layer = 1
 
   function obj:dist(other)
     return self.pos:sub(other.pos):mag()
@@ -162,6 +178,7 @@ function newcursor(x, y)
   local cursor = newanchor(x, y)
   cursor.speed = 1
   cursor.radius = 10
+  cursor.layer = cursor_layer
 
   function cursor:update()
     -- movement
@@ -205,6 +222,7 @@ end
 
 function newbeehive(x, y)
   local beehive = newanchor(x, y)
+  beehive.layer = beehive_layer
 
   function beehive:update()
   end
@@ -223,6 +241,7 @@ function newanchor(x, y)
   anchor.pos.y = y
   anchor.radius = 10
   anchor.bees = {}
+  anchor.layer = anchor_layer
 
   function anchor:update()
   end
@@ -246,6 +265,7 @@ function newbee(x, y, anchor)
   bee.elevation = random(bee.minelevation, bee.maxelevation)
   bee.targetelevation = random(bee.minelevation, bee.maxelevation)
   bee.anchor = anchor
+  bee.layer = bee_layer
 
   function bee:update()
     -- handle anchors and targets
@@ -259,7 +279,7 @@ function newbee(x, y, anchor)
     local cohesion = self:cohesion():mult(0.5)
 
     -- there's a weird bias towards the top left of the cursor. this is a little hack to reduce it.
-    local removebias = newvector(.15, .15)
+    local removebias = newvector(.2, .2)
 
     -- sum 'em all up
     self.vel = self.vel:add(targetenemy):add(targetanchor):add(separation):add(alignment):add(cohesion):add(removebias)
@@ -419,6 +439,7 @@ function newenemy(x, y)
   local enemy = newgameobj()
   enemy.pos.x = x
   enemy.pos.y = y
+  enemy.layer = enemy_layer
 
   function enemy:update()
     self.vel.x = 0.25
@@ -439,6 +460,7 @@ function newbeecounter()
   local counter = newgameobj()
   counter.pos.x = 1
   counter.pos.y = 1
+  counter.layer = hud_layer
 
   function counter:update()
   end
