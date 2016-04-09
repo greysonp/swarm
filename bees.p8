@@ -31,12 +31,12 @@ function _init()
   poke(0x5f2c, 3)
   cls()
 
-  -- init camera state
-  cam = newvector(0, 0)
-
   -- add cursor to the stage
-  cursor = newcursor(32, 32)
+  cursor = newcursor(50, 50)
   add(stage, cursor)
+
+  -- init camera state
+  cam = newvector(cursor.pos.x - 32, cursor.pos.y - 32)
 
   -- add beehive to the stage
   beehive = newbeehive(64, 64)
@@ -48,7 +48,7 @@ function _init()
 
   -- add bees to the stage
   for i = 1, startbees do
-    local bee = newbee(rnd(64), rnd(64), cursor)
+    local bee = newbee(random(beehive.pos.x - 5, beehive.pos.x + 5), random(beehive.pos.y - 5, beehive.pos.y + 5), beehive)
     addbee(bee)
   end
 
