@@ -32,6 +32,9 @@ function _init()
     local bee = newbee(rnd(64), rnd(64), cursor)
     addbee(bee)
   end
+
+  -- add an enemy
+  addenemy(newenemy(10, 10))
 end
 
 function _update()
@@ -183,10 +186,6 @@ function newcursor(x, y)
     spr(0, self.pos.x - 1, self.pos.y - 1)
   end
 
-  function cursor:getcenter()
-    return self.pos:add(newvector(1, 1))
-  end
-
   return cursor
 end
 
@@ -212,8 +211,6 @@ function newbee(x, y, anchor)
   bee.pos.x = x
   bee.pos.y = y
   bee.maxspeed = 2.5
-  bee.vel.x = 0
-  bee.vel.y = 0
   bee.vision = 5
   bee.targetvision = 10
   bee.minelevation = 1
@@ -223,12 +220,9 @@ function newbee(x, y, anchor)
   bee.anchor = anchor
 
   function bee:update()
-    -- move towards all targets
-    local target = newvector(0, 0)
-    for bt in all(beetargets) do
-      target = target:add(self:target(bt):mult(bt.attraction))
-    end
+    -- handle anchors and targets
     local targetanchor = self:targetanchor()
+    local targetenemy = self:targetenemy():mult(2.5)
 
     -- implement the traditional swarming algorithm
     -- http://processingjs.org/learning/topic/flocking/
@@ -239,7 +233,8 @@ function newbee(x, y, anchor)
     -- there's a weird bias towards the top left of the cursor. this is a little hack to reduce it.
     local removebias = newvector(.15, .15)
 
-    self.vel = self.vel:add(target):add(targetanchor):add(separation):add(alignment):add(cohesion):add(removebias)
+    -- sum 'em all up
+    self.vel = self.vel:add(targetenemy):add(targetanchor):add(separation):add(alignment):add(cohesion):add(removebias)
 
     -- keep everything under a maximum speed
     local currspeed = self.vel:mag()
@@ -267,11 +262,15 @@ function newbee(x, y, anchor)
     pset(self.pos.x, self.pos.y - self.elevation + self.minelevation, 10)
   end
 
-  function bee:target(t)
-    local diff = t:getcenter():sub(self.pos)
-    local rads = atan2(diff.x, diff.y)
+  function bee:targetenemy()
+    local enemy = findclosest(enemies, self.anchor.pos.x, self.anchor.pos.y, function(obj, dist)
+      return dist <= self.anchor.radius
+    end)
 
-    if diff:mag() <= self.targetvision then
+    if enemy != nil then
+      local diff = enemy.pos:sub(self.pos)
+      local rads = atan2(diff.x, diff.y)
+
       local tvec = newvector(cos(rads), sin(rads))
       tvec:norm()
       return tvec
@@ -392,18 +391,14 @@ function newenemy(x, y)
   local enemy = newgameobj()
   enemy.pos.x = x
   enemy.pos.y = y
-  enemy.attraction = 1
 
   function enemy:update()
-    -- do something
+    self.vel.x = 0.25
+    self.vel.y = 0.25
   end
 
   function enemy:draw()
     pset(self.pos.x, self.pos.y, 8)
-  end
-
-  function enemy:getcenter()
-    return self.pos
   end
 
   return enemy
