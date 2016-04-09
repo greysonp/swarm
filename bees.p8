@@ -441,12 +441,11 @@ function newbeecounter()
   counter.pos.y = 1
 
   function counter:update()
-    self.pos.x = cam.x + 1
-    self.pos.y = cam.y + 1
   end
 
   function counter:draw()
-    print(count(cursor.bees) .. '/' .. count(bees), self.pos.x, self.pos.y, 7)
+    -- we have to get the cam position here because the camera is adjusted during the draw call
+    print(count(cursor.bees) .. '/' .. count(bees), cam.x + 1, cam.y + 1, 7)
   end
 
   return counter
