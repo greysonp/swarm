@@ -17,7 +17,7 @@ startbees = 10
 camlag = .07 -- constant we use as 't' in low-pass filter calculation
 beehive_layer = 1
 anchor_layer = beehive_layer + 1
-enemy_layer = beehive_layer + 1
+enemy_layer = anchor_layer + 1
 bee_layer = enemy_layer + 1
 cursor_layer = bee_layer + 1
 hud_layer = cursor_layer + 1
@@ -84,13 +84,17 @@ function _draw()
 
   -- construct a mapping of each object to it's layer
   local layers = {}
+  local maxlayer = 0
   for obj in all(stage) do
     if layers[obj.layer] == nil then layers[obj.layer] = {} end
     add(layers[obj.layer], obj)
+    maxlayer = max(maxlayer, obj.layer)
   end
 
   -- draw all the object, layer by layer
-  for layer in all(layers) do
+  -- note: need 'maxlayer' because all(coll) only works with continuous arrays (we may have layer gaps)
+  for i = 1, maxlayer do
+    local layer = layers[i]
     for obj in all(layer) do
       obj:draw()
     end
