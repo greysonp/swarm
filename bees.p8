@@ -289,7 +289,8 @@ function newbee(x, y, anchor)
   bee.targetelevation = random(bee.minelevation, bee.maxelevation)
   bee.anchor = anchor
   bee.layer = bee_layer
-  bee.attackdelay = 10
+  bee.attackspeed = 10
+  bee.health = 3
 
   function bee:update()
     -- handle anchors and targets
@@ -334,12 +335,24 @@ function newbee(x, y, anchor)
     pset(self.pos.x, self.pos.y + self.minelevation, 3)
 
     -- draw the yellow bit where the bee is, taking elevation into account
-    pset(self.pos.x, self.pos.y - self.elevation + self.minelevation, 10)
+    local color = 10
+    if self.health == 2 then color = 9
+    elseif self.health <= 1 then color = 8 end
+    pset(self.pos.x, self.pos.y - self.elevation + self.minelevation, color)
+  end
+
+  function bee:sethealth(health)
+    self.health = max(0, health)
+    if health == 0 then
+      del(self.anchor.bees, self)
+      del(bees, self)
+      del(stage, self)
+    end
   end
 
   function bee:targetenemy()
     local enemy = findclosest(enemies, self.anchor.pos.x, self.anchor.pos.y, function(obj, dist)
-      return dist <= self.anchor.radius
+      return obj.health > 0 and dist <= self.anchor.radius
     end)
 
     if enemy != nil then
@@ -461,11 +474,11 @@ function newbee(x, y, anchor)
 
   function bee:attack()
     local enemy = findclosest(enemies, self.anchor.pos.x, self.anchor.pos.y, function(obj, dist)
-      return dist <= self.anchor.radius
+      return obj.health > 0 and dist <= self.anchor.radius
     end)
 
-    if enemy != nil and time % self.attackdelay == 0 then
-      enemy.health = enemy.health - 1
+    if enemy != nil and time % self.attackspeed == 0 then
+      enemy:sethealth(enemy.health - 1)
     end
   end
 
@@ -478,25 +491,70 @@ function newenemy(x, y)
   enemy.pos.y = y
   enemy.layer = enemy_layer
   enemy.walkanim = {64, 65}
+  enemy.attackanim = {66, 67}
+  enemy.runanim = {68, 69}
   enemy.maxhealth = 100
   enemy.health = enemy.maxhealth
   enemy.healthbar = newhealthbar(enemy, -9)
+  enemy.radius = 7
+  enemy.attackspeed = 30
+  enemy.state = 0 -- 0 = normal, 1 = attacking, 2 = running
 
   function enemy:update()
     self.vel.x = 0.25
     self.vel.y = 0.25
+
+    -- only attack if not running away
+    if self.state != 2 then
+      self:attack()
+    else
+      self.vel.x = 0
+      self.vel.y = -1
+    end
   end
 
   function enemy:draw()
-    spr(getsprite(self.walkanim, 16), self.pos.x - 4, self.pos.y - 7)
+    if self.state == 0 then
+      spr(getsprite(self.walkanim, 16), self.pos.x - 4, self.pos.y - 7)
+    elseif self.state == 1 then
+      spr(getsprite(self.attackanim, 16), self.pos.x - 4, self.pos.y - 7)
+    elseif self.state == 2 then
+      spr(getsprite(self.runanim, 4), self.pos.x - 4, self.pos.y - 7)
+    end
 
     -- make eyes and mouth black
-    pset(self.pos.x - 2, self.pos.y - 4, 0)
-    pset(self.pos.x + 2, self.pos.y - 4, 0)
-    pset(self.pos.x, self.pos.y - 3, 0)
+    if self.state != 2 then
+      pset(self.pos.x - 2, self.pos.y - 4, 0)
+      pset(self.pos.x + 2, self.pos.y - 4, 0)
+      pset(self.pos.x, self.pos.y - 3, 0)
+    end
 
     -- draw healthbar
     self.healthbar:draw(enemy.health, enemy.maxhealth)
+  end
+
+  function enemy:attack()
+    local bee = findclosest(bees, self.pos.x, self.pos.y, function(obj, dist)
+      return dist <= self.radius
+    end)
+
+    if bee != nil then
+      if time % self.attackspeed == 0 then
+        bee:sethealth(bee.health - 1)
+      end
+      self.vel.x = 0
+      self.vel.y = 0
+      self.state = 1
+    else
+      self.state = 0
+    end
+  end
+
+  function enemy:sethealth(health)
+    self.health = max(0, health)
+    if self.health == 0 then
+      self.state = 2
+    end
   end
 
   return enemy
@@ -617,14 +675,14 @@ a9a0099aaa900a9aaa900a9aa0000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-09000009090000090900000909000009000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-09900099099000990990009909900099000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-04999994049999940499999404999994000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00099900000999000009990000099900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00ff0ff000ff0ff000ff0ff000ff0ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-f9044400f90444000004840909044400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-09499900094999000099999000999990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00090000000009000909090000090909000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+09000009090000090900000909000009900000909000009000000000000000000000000000000000000000000000000000000000000000000000000000000000
+09900099099000990990009909900099990009909900099000000000000000000000000000000000000000000000000000000000000000000000000000000000
+04999994049999940499999404999994999999909999999000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00099900000999000009990000099900099999000999990000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00ff0ff000ff0ff000ff0ff000ff0ff00f999f000f999f0000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f9044400f904440000048409090444000044409f0044409f00000000000000000000000000000000000000000000000000000000000000000000000000000000
+09499900094999000099999000999990009994900099949000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00090000000009000909090000090909009000000000900000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
