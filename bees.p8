@@ -289,6 +289,7 @@ function newbee(x, y, anchor)
   bee.targetelevation = random(bee.minelevation, bee.maxelevation)
   bee.anchor = anchor
   bee.layer = bee_layer
+  bee.attackdelay = 10
 
   function bee:update()
     -- handle anchors and targets
@@ -322,6 +323,9 @@ function newbee(x, y, anchor)
     else
       self.targetelevation = random(self.minelevation, self.maxelevation)
     end
+
+    -- attack
+    self:attack()
   end
 
   function bee:draw()
@@ -455,6 +459,16 @@ function newbee(x, y, anchor)
     self.anchor = anchor
   end
 
+  function bee:attack()
+    local enemy = findclosest(enemies, self.anchor.pos.x, self.anchor.pos.y, function(obj, dist)
+      return dist <= self.anchor.radius
+    end)
+
+    if enemy != nil and time % self.attackdelay == 0 then
+      enemy.health = enemy.health - 1
+    end
+  end
+
   return bee
 end
 
@@ -464,6 +478,9 @@ function newenemy(x, y)
   enemy.pos.y = y
   enemy.layer = enemy_layer
   enemy.walkanim = {64, 65}
+  enemy.maxhealth = 100
+  enemy.health = enemy.maxhealth
+  enemy.healthbar = newhealthbar(enemy, -9)
 
   function enemy:update()
     self.vel.x = 0.25
@@ -472,9 +489,14 @@ function newenemy(x, y)
 
   function enemy:draw()
     spr(getsprite(self.walkanim, 16), self.pos.x - 4, self.pos.y - 7)
+
+    -- make eyes and mouth black
     pset(self.pos.x - 2, self.pos.y - 4, 0)
     pset(self.pos.x + 2, self.pos.y - 4, 0)
     pset(self.pos.x, self.pos.y - 3, 0)
+
+    -- draw healthbar
+    self.healthbar:draw(enemy.health, enemy.maxhealth)
   end
 
   return enemy
@@ -495,6 +517,29 @@ function newbeecounter()
   end
 
   return counter
+end
+
+function newhealthbar(target, yoffset)
+  healthbar = {}
+  healthbar.target = target
+  healthbar.yoffset = yoffset
+
+  function healthbar:draw(current, total)
+    local width = 8
+    local innerwidth = max((current / total) * width, 0)
+
+    local x1 = target.pos.x - (width / 2)
+    local y1 = target.pos.y + self.yoffset + sgn(self.yoffset)
+    local x2 = target.pos.x + (width / 2)
+    local y2 = target.pos.y + self.yoffset
+
+    rectfill(x1, y1, x2, y2, 8)
+    if innerwidth > 0 then
+      rectfill(x1, y1, x1 + innerwidth, y2, 12)
+    end
+  end
+
+  return healthbar
 end
 
 function newvector(x, y)
@@ -834,4 +879,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
