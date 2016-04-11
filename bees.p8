@@ -527,10 +527,10 @@ function newenemy(x, y)
       pset(self.pos.x - 2, self.pos.y - 4, 0)
       pset(self.pos.x + 2, self.pos.y - 4, 0)
       pset(self.pos.x, self.pos.y - 3, 0)
-    end
 
-    -- draw healthbar
-    self.healthbar:draw(enemy.health, enemy.maxhealth)
+      -- draw health bar
+      self.healthbar:draw(enemy.health, enemy.maxhealth)
+    end
   end
 
   function enemy:attack()
