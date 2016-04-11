@@ -53,8 +53,8 @@ function _init()
   -- add flowers to the stage
   addflower(newflower(32, 32, 32))
   addflower(newflower(96, 32, 33))
-  addflower(newflower(32, 96, 34))
-  addflower(newflower(96, 96, 35))
+  addflower(newflower(96, 96, 34))
+  addflower(newflower(32, 96, 35))
 
   -- add bees to the stage
   for i = 1, startbees do
@@ -63,7 +63,7 @@ function _init()
   end
 
   -- add an enemy
-  addenemy(newenemy(10, 10))
+  addenemy(newenemy(64, 0))
 end
 
 function _update()
@@ -112,9 +112,9 @@ function _draw()
     end
   end
 
-  if flag then pset(63, 0, 8) end
+  if flag then pset(cam.x + 63, cam.y, 8) end
   if debugtext != nil then
-    print(debugtext, 0, 59)
+    print(debugtext, cam.x, cam.y + 59)
   end
 end
 
@@ -171,6 +171,7 @@ function findclosest(coll, x, y, cond)
     local dist = diff:mag()
     if dist < closestdist and cond(obj, dist) then
       closest = obj
+      closestdist = dist
     end
   end
   return closest
@@ -513,21 +514,27 @@ function newenemy(x, y)
   enemy.maxhealth = 100
   enemy.health = enemy.maxhealth
   enemy.healthbar = newhealthbar(enemy, -9)
-  enemy.radius = 7
+  enemy.radius = 5
   enemy.attackspeed = 30
+  enemy.walkspeed = 0.25
   enemy.state = 0 -- 0 = normal, 1 = attacking, 2 = running
 
   function enemy:update()
-    self.vel.x = 0.25
-    self.vel.y = 0.25
-
-    -- only attack if not running away
     if self.state != 2 then
-      self:attack()
+      self.state = 0
+      self:attackifpossible()
+
+      -- if we didn't attack anything, then walk towards a flower
+      if self.state == 0 then
+        self:targetflower()
+      end
     else
+      -- run away!
       self.vel.x = 0
       self.vel.y = -1
     end
+
+
   end
 
   function enemy:draw()
@@ -552,7 +559,7 @@ function newenemy(x, y)
     end
   end
 
-  function enemy:attack()
+  function enemy:attackifpossible()
     local bee = findclosest(bees, self.pos.x, self.pos.y, function(obj, dist)
       return dist <= self.radius
     end)
@@ -564,9 +571,16 @@ function newenemy(x, y)
       self.vel.x = 0
       self.vel.y = 0
       self.state = 1
-    else
-      self.state = 0
     end
+  end
+
+  function enemy:targetflower()
+    local flower = findclosest(flowers, self.pos.x, self.pos.y, function(obj, dist) return true end)
+    local diff = flower.pos:sub(self.pos)
+    local rads = atan2(diff.x, diff.y)
+
+    self.vel.x = cos(rads) * self.walkspeed
+    self.vel.y = sin(rads) * self.walkspeed
   end
 
   function enemy:sethealth(health)
