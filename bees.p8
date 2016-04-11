@@ -560,18 +560,28 @@ function newenemy(x, y)
   end
 
   function enemy:attackifpossible()
-    local bee = findclosest(bees, self.pos.x, self.pos.y, function(obj, dist)
+    -- try to attack a bee first
+    local attacked = self:attack(bees)
+    if not attacked then
+      self:attack(flowers)
+    end
+  end
+
+  function enemy:attack(coll)
+    local obj = findclosest(coll, self.pos.x, self.pos.y, function(obj, dist)
       return dist <= self.radius
     end)
 
-    if bee != nil then
+    if obj != nil then
       if time % self.attackspeed == 0 then
-        bee:sethealth(bee.health - 1)
+        obj:sethealth(obj.health - 1)
       end
       self.vel.x = 0
       self.vel.y = 0
       self.state = 1
+      return true
     end
+    return false
   end
 
   function enemy:targetflower()
@@ -597,7 +607,7 @@ function newflower(x, y, sprite)
   local flower = newanchor(x, y)
   flower.sprite = sprite
   flower.removable = false
-  flower.maxhealth = 100
+  flower.maxhealth = 20
   flower.health = flower.maxhealth
   flower.healthbar = newhealthbar(flower, 5)
 
@@ -611,6 +621,15 @@ function newflower(x, y, sprite)
     -- draw the health bar
     if self.health < self.maxhealth then
       self.healthbar:draw(self.health, self.maxhealth)
+    end
+  end
+
+  function flower:sethealth(health)
+    self.health = max(0, health)
+    if self.health == 0 then
+      del(flowers, self)
+      del(anchors, self)
+      del(stage, self)
     end
   end
 
