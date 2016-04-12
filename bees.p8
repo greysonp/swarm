@@ -77,7 +77,7 @@ function _update()
   end)
 
   -- update the camera position
-  local adjcursor = cursor.pos:sub(newvector(32, 32))
+  local adjcursor = vsub(cursor.pos, newvector(32, 32))
   cam.x = cam.x * (1 - camlag) + adjcursor.x * camlag
   cam.y = cam.y * (1 - camlag) + adjcursor.y * camlag
 
@@ -167,7 +167,7 @@ function findclosest(coll, x, y, cond)
   local closest = nil
   local closestdist = 32000
   for obj in all(coll) do
-    local diff = obj.pos:sub(newvector(x, y))
+    local diff = vsub(obj.pos, newvector(x, y))
     local dist = diff:mag()
     if dist < closestdist and cond(obj, dist) then
       closest = obj
@@ -202,7 +202,7 @@ function newgameobj()
   obj.layer = 1
 
   function obj:dist(other)
-    return self.pos:sub(other.pos):mag()
+    return vsub(self.pos, other.pos):mag()
   end
 
   return obj
@@ -252,7 +252,7 @@ function newcursor(x, y)
       end
     end
 
-    local newpos = self.pos:add(self.vel)
+    local newpos = vadd(self.pos, self.vel)
     if newpos.x < 0 or newpos.x > 128 then self.vel.x = 0 end
     if newpos.y < 0 or newpos.y > 128 then self.vel.y = 0 end
   end
@@ -351,19 +351,30 @@ function newbee(x, y, anchor)
 
     -- handle anchors and targets
     local targetanchor = self:targetanchor()
-    local targetenemy = self:targetenemy():mult(2.5)
+    local targetenemy = self:targetenemy()
+    targetenemy:mult(2.5)
 
     -- implement the traditional swarming algorithm
     -- http://processingjs.org/learning/topic/flocking/
-    local separation = self:separation():mult(0.5)
-    local alignment = self:alignment(neighbors):mult(0.25)
-    local cohesion = self:cohesion(neighbors):mult(0.5)
+    local separation = self:separation()
+    separation:mult(0.5)
+
+    local alignment = self:alignment(neighbors)
+    alignment:mult(0.25)
+
+    local cohesion = self:cohesion(neighbors)
+    cohesion:mult(0.5)
 
     -- there's a weird bias towards the top left of the cursor. this is a little hack to reduce it.
     local removebias = newvector(.2, .2)
 
     -- sum 'em all up
-    self.vel = self.vel:add(targetenemy):add(targetanchor):add(separation):add(alignment):add(cohesion):add(removebias)
+    self.vel:add(targetenemy)
+    self.vel:add(targetanchor)
+    self.vel:add(separation)
+    self.vel:add(alignment)
+    self.vel:add(cohesion)
+    self.vel:add(removebias)
 
     -- keep everything under a maximum speed
     local currspeed = self.vel:mag()
@@ -410,7 +421,7 @@ function newbee(x, y, anchor)
     local enemy = self.anchor.closestenemy
 
     if enemy != nil then
-      local diff = enemy.pos:sub(self.pos)
+      local diff = vsub(enemy.pos, self.pos)
       local rads = atan2(diff.x, diff.y)
 
       local tvec = newvector(cos(rads), sin(rads))
@@ -422,7 +433,7 @@ function newbee(x, y, anchor)
   end
 
   function bee:targetanchor()
-    local diff = self.anchor.pos:sub(self.pos)
+    local diff = vsub(self.anchor.pos, self.pos)
     local rads = atan2(diff.x, diff.y)
     local tvec = newvector(cos(rads), sin(rads))
 
@@ -438,7 +449,6 @@ function newbee(x, y, anchor)
     tvec:norm()
 
     -- make strength of pull strong the further away the bee is from the cursor
-    tvec:mult(dist * dist * 0.3)
     return tvec
   end
 
@@ -447,7 +457,7 @@ function newbee(x, y, anchor)
       return obj != self and dist < self.vision
     end)
     if threat != nil then
-      local diff = self.pos:sub(threat.pos)
+      local diff = vsub(self.pos, threat.pos)
       diff:norm()
       return diff
     else
@@ -459,11 +469,11 @@ function newbee(x, y, anchor)
     local sum = newvector(0, 0)
     local count = 0
     for bee in all(neighbors) do
-      sum = sum:add(bee.vel)
+      sum:add(bee.vel)
       count += 1
     end
     if count > 0 then
-      local avg = sum:div(count)
+      local avg = vdiv(sum, count)
       avg:norm()
       return avg
     else
@@ -475,12 +485,12 @@ function newbee(x, y, anchor)
     local sum = newvector(0, 0)
     local count = 0
     for bee in all(neighbors) do
-      sum = sum:add(bee.pos)
+      sum:add(bee.pos)
       count += 1
     end
     if count > 0 then
-      local avg = sum:div(count)
-      local diff = self.vel:sub(avg)
+      local avg = vdiv(sum, count)
+      local diff = vsub(self.vel, avg)
       local rads = atan2(diff.x, diff.y)
       local vec = newvector(cos(rads), sin(rads))
       vec:norm()
@@ -611,7 +621,7 @@ function newenemy(x, y)
 
   function enemy:targetflower()
     local flower = findclosest(flowers, self.pos.x, self.pos.y, function(obj, dist) return true end)
-    local diff = flower.pos:sub(self.pos)
+    local diff = vsub(flower.pos, self.pos)
     local rads = atan2(diff.x, diff.y)
 
     self.vel.x = cos(rads) * self.walkspeed
@@ -735,19 +745,23 @@ function newvector(x, y)
   vec.y = y
 
   function vec:add(v)
-    return newvector(self.x + v.x, self.y + v.y)
+    self.x += v.x
+    self.y += v.y
   end
 
   function vec:sub(v)
-    return newvector(self.x - v.x, self.y - v.y)
+    self.x -= v.x
+    self.y -= v.y
   end
 
   function vec:mult(s)
-    return newvector(self.x * s, self.y * s)
+    self.x *= s
+    self.y *= s
   end
 
   function vec:div(s)
-    return newvector(self.x / s, self.y / s)
+    self.x /= s
+    self.y /= s
   end
 
   function vec:mag()
@@ -769,6 +783,22 @@ function newvector(x, y)
   end
 
   return vec
+end
+
+function vadd(v1, v2)
+  return newvector(v1.x + v2.x, v1.y + v2.y)
+end
+
+function vsub(v1, v2)
+  return newvector(v1.x - v2.x, v1.y - v2.y)
+end
+
+function vmult(v, s)
+  return newvector(v.x * s, v.y * s)
+end
+
+function vdiv(v, s)
+  return newvector(v.x / s, v.y / s)
 end
 
 __gfx__
