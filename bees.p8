@@ -69,6 +69,11 @@ end
 function _update()
   time = (time + 1) % 32000
 
+  -- clear out all of the cached bee data
+  foreach(bees, function(bee)
+    bee.closestbee =  nil
+  end)
+
   -- update all of the object's positions
   foreach(stage, function(obj)
     obj:update()
@@ -294,7 +299,9 @@ function newbeehive(x, y)
   function beehive:pollinate()
     self.pollen = min(self.pollen + 1, self.maxpollen)
     if self.pollen == self.maxpollen then
-      addbee(newbee(self.pos.x, self.pos.y, self))
+      local bx = random(self.pos.x - 3, self.pos.x + 3)
+      local by = random(self.pos.y - 3, self.pos.y + 3)
+      addbee(newbee(bx, by, self))
       self.pollen = 0
     end
   end
@@ -345,9 +352,11 @@ function newbee(x, y, anchor)
   bee.layer = bee_layer
   bee.attackspeed = 10
   bee.health = 3
+  bee.closestbee = nil
 
   function bee:update()
-    local neighbors = self:findneighbors()
+    -- calculate the closest bee once for use by all future functions
+    self:updateclosestbee()
 
     -- handle anchors and targets
     local targetanchor = self:targetanchor()
@@ -359,14 +368,11 @@ function newbee(x, y, anchor)
     local separation = self:separation()
     separation:mult(0.5)
 
-    local alignment = self:alignment(neighbors)
-    alignment:mult(0.25)
-
-    local cohesion = self:cohesion(neighbors)
-    cohesion:mult(0.5)
-
-    -- there's a weird bias towards the top left of the cursor. this is a little hack to reduce it.
-    local removebias = newvector(.2, .2)
+    local alignment = self:alignment()
+    alignment:mult(0.05)
+    --
+    local cohesion = self:cohesion()
+    cohesion:mult(0.05)
 
     -- sum 'em all up
     self.vel:add(targetenemy)
@@ -374,7 +380,6 @@ function newbee(x, y, anchor)
     self.vel:add(separation)
     self.vel:add(alignment)
     self.vel:add(cohesion)
-    self.vel:add(removebias)
 
     -- keep everything under a maximum speed
     local currspeed = self.vel:mag()
@@ -417,6 +422,18 @@ function newbee(x, y, anchor)
     end
   end
 
+  function bee:updateclosestbee()
+    if self.closestbee == nil then
+      self.closestbee = findclosest(bees, self.pos.x, self.pos.y, function(obj, dist)
+        return obj != self and dist < self.vision
+      end)
+    end
+    if self.closestbee != nil then
+      -- cache calculation for other bee
+      self.closestbee.closestbee = self
+    end
+  end
+
   function bee:targetenemy()
     local enemy = self.anchor.closestenemy
 
@@ -453,11 +470,8 @@ function newbee(x, y, anchor)
   end
 
   function bee:separation()
-    local threat = findclosest(bees, self.pos.x, self.pos.y, function(obj, dist)
-      return obj != self and dist < self.vision
-    end)
-    if threat != nil then
-      local diff = vsub(self.pos, threat.pos)
+    if self.closestbee != nil then
+      local diff = vsub(self.pos, self.closestbee.pos)
       diff:norm()
       return diff
     else
@@ -465,31 +479,17 @@ function newbee(x, y, anchor)
     end
   end
 
-  function bee:alignment(neighbors)
-    local sum = newvector(0, 0)
-    local count = 0
-    for bee in all(neighbors) do
-      sum:add(bee.vel)
-      count += 1
-    end
-    if count > 0 then
-      local avg = vdiv(sum, count)
-      avg:norm()
-      return avg
+  function bee:alignment()
+    if self.closestbee != nil then
+      return vadd(self.vel, bee.vel):div(2)
     else
       return newvector(0, 0)
     end
   end
 
   function bee:cohesion(neighbors)
-    local sum = newvector(0, 0)
-    local count = 0
-    for bee in all(neighbors) do
-      sum:add(bee.pos)
-      count += 1
-    end
-    if count > 0 then
-      local avg = vdiv(sum, count)
+    if self.closestbee != nil then
+      local avg = vadd(self.vel, bee.vel):div(2)
       local diff = vsub(self.vel, avg)
       local rads = atan2(diff.x, diff.y)
       local vec = newvector(cos(rads), sin(rads))
@@ -498,20 +498,6 @@ function newbee(x, y, anchor)
     else
       return newvector(0, 0)
     end
-  end
-
-  function bee:findneighbors()
-    local neighbors = {}
-
-    for bee in all(bees) do
-      if bee != self then
-        local dist = self:dist(bee)
-        if dist <= self.vision then
-          add(neighbors, bee)
-        end
-      end
-    end
-    return neighbors
   end
 
   function bee:setanchor(anchor)
@@ -747,21 +733,25 @@ function newvector(x, y)
   function vec:add(v)
     self.x += v.x
     self.y += v.y
+    return self
   end
 
   function vec:sub(v)
     self.x -= v.x
     self.y -= v.y
+    return self
   end
 
   function vec:mult(s)
     self.x *= s
     self.y *= s
+    return self
   end
 
   function vec:div(s)
     self.x /= s
     self.y /= s
+    return self
   end
 
   function vec:mag()
