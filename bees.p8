@@ -424,7 +424,7 @@ function newbee(x, y, anchor)
 
   function bee:updateclosestbee()
     if self.closestbee == nil then
-      self.closestbee = findclosest(bees, self.pos.x, self.pos.y, function(obj, dist)
+      self.closestbee = findclosest(self.anchor.bees, self.pos.x, self.pos.y, function(obj, dist)
         return obj != self and dist < self.vision
       end)
     end
