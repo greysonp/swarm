@@ -216,6 +216,8 @@ function newcursor(x, y)
   cursor.removable = false
 
   function cursor:update()
+    self:superupdate()
+
     -- movement
     self.vel.x = 0
     self.vel.y = 0
@@ -276,6 +278,7 @@ function newbeehive(x, y)
   beehive.progressbar.height = 1
 
   function beehive:update()
+    self:superupdate()
   end
 
   function beehive:draw()
@@ -307,8 +310,17 @@ function newanchor(x, y)
   anchor.bees = {}
   anchor.layer = anchor_layer
   anchor.removable = true
+  anchor.closestenemy = nil
 
   function anchor:update()
+    self:superupdate()
+  end
+
+  function anchor:superupdate()
+    debugtext = self.radius
+    self.closestenemy = findclosest(enemies, self.pos.x, self.pos.y, function(obj, dist)
+      return obj.health > 0 and dist <= self.radius
+    end)
   end
 
   function anchor:draw()
@@ -395,9 +407,7 @@ function newbee(x, y, anchor)
   end
 
   function bee:targetenemy()
-    local enemy = findclosest(enemies, self.anchor.pos.x, self.anchor.pos.y, function(obj, dist)
-      return obj.health > 0 and dist <= self.anchor.radius
-    end)
+    local enemy = self.anchor.closestenemy
 
     if enemy != nil then
       local diff = enemy.pos:sub(self.pos)
@@ -501,9 +511,7 @@ function newbee(x, y, anchor)
   end
 
   function bee:attack()
-    local enemy = findclosest(enemies, self.anchor.pos.x, self.anchor.pos.y, function(obj, dist)
-      return obj.health > 0 and dist <= self.anchor.radius
-    end)
+    local enemy = self.anchor.closestenemy
 
     if enemy != nil and time % self.attackspeed == 0 then
       enemy:sethealth(enemy.health - 1)
@@ -636,6 +644,8 @@ function newflower(x, y, sprite)
 
 
   function flower:update()
+    self:superupdate()
+
     if count(self.bees) > 0 then
       self.pollencount += 1
       if self.pollencount > self.pollenspeed then
