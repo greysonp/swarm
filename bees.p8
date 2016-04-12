@@ -335,6 +335,8 @@ function newbee(x, y, anchor)
   bee.health = 3
 
   function bee:update()
+    local neighbors = self:findneighbors()
+
     -- handle anchors and targets
     local targetanchor = self:targetanchor()
     local targetenemy = self:targetenemy():mult(2.5)
@@ -342,8 +344,8 @@ function newbee(x, y, anchor)
     -- implement the traditional swarming algorithm
     -- http://processingjs.org/learning/topic/flocking/
     local separation = self:separation():mult(0.5)
-    local alignment = self:alignment():mult(0.25)
-    local cohesion = self:cohesion():mult(0.5)
+    local alignment = self:alignment(neighbors):mult(0.25)
+    local cohesion = self:cohesion(neighbors):mult(0.5)
 
     -- there's a weird bias towards the top left of the cursor. this is a little hack to reduce it.
     local removebias = newvector(.2, .2)
@@ -431,7 +433,9 @@ function newbee(x, y, anchor)
   end
 
   function bee:separation()
-    local threat = self:findthreat()
+    local threat = findclosest(bees, self.pos.x, self.pos.y, function(obj, dist)
+      return obj != self and dist < self.vision
+    end)
     if threat != nil then
       local diff = self.pos:sub(threat.pos)
       diff:norm()
@@ -441,8 +445,7 @@ function newbee(x, y, anchor)
     end
   end
 
-  function bee:alignment()
-    local neighbors = self:findneighbors()
+  function bee:alignment(neighbors)
     local sum = newvector(0, 0)
     local count = 0
     for bee in all(neighbors) do
@@ -458,8 +461,7 @@ function newbee(x, y, anchor)
     end
   end
 
-  function bee:cohesion()
-    local neighbors = self:findneighbors()
+  function bee:cohesion(neighbors)
     local sum = newvector(0, 0)
     local count = 0
     for bee in all(neighbors) do
@@ -476,22 +478,6 @@ function newbee(x, y, anchor)
     else
       return newvector(0, 0)
     end
-  end
-
-  function bee:findthreat()
-    local threat = nil
-    local threatdist = 32000
-
-    for bee in all(bees) do
-      if bee != self then
-        local dist = self:dist(bee)
-        if dist < threatdist and dist <= self.vision then
-          threatdist = dist
-          threat = bee
-        end
-      end
-    end
-    return threat
   end
 
   function bee:findneighbors()
