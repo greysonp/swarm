@@ -267,6 +267,11 @@ function newbeehive(x, y)
   beehive.layer = beehive_layer
   beehive.anim = {16, 17, 18}
   beehive.removable = false
+  beehive.progressbar = newhealthbar(beehive, 9)
+
+  beehive.progressbar.bgcolor = 4
+  beehive.progressbar.fgcolor = 9
+  beehive.progressbar.height = 1
 
   function beehive:update()
   end
@@ -274,6 +279,8 @@ function newbeehive(x, y)
   function beehive:draw()
     spr(getsprite(self.anim, 72), self.pos.x - 4, self.pos.y)
     rectfill(self.pos.x - 1, self.pos.y + 6, self.pos.x, self.pos.y + 7, 0)
+
+    self.progressbar:draw(5, 10)
   end
 
   return beehive
@@ -523,6 +530,8 @@ function newenemy(x, y)
   enemy.walkspeed = 0.25
   enemy.state = 0 -- 0 = normal, 1 = attacking, 2 = running
 
+  enemy.healthbar.width = 7
+
   function enemy:update()
     if self.state != 2 then
       self.state = 0
@@ -621,6 +630,9 @@ function newflower(x, y, sprite)
   flower.healthbar = newhealthbar(flower, 5)
   flower.pollenanimation = {48, 49, 50}
 
+  flower.healthbar.width = 7
+  flower.healthbar.xoffset = 1
+
   function flower:update()
   end
 
@@ -672,19 +684,26 @@ function newhealthbar(target, yoffset)
   healthbar = {}
   healthbar.target = target
   healthbar.yoffset = yoffset
+  healthbar.xoffset = 0
+  healthbar.bgcolor = 8
+  healthbar.fgcolor = 12
+  healthbar.height = 1
+  healthbar.width = 8
+
+  function healthbar:update()
+  end
 
   function healthbar:draw(current, total)
-    local width = 8
-    local innerwidth = max((current / total) * width, 0)
+    local innerwidth = max((current / total) * self.width - 1, 0)
 
-    local x1 = target.pos.x - (width / 2)
-    local y1 = target.pos.y + self.yoffset + sgn(self.yoffset)
-    local x2 = target.pos.x + (width / 2)
+    local x1 = target.pos.x - (self.width / 2) + self.xoffset
+    local y1 = target.pos.y + self.yoffset + (sgn(self.yoffset) * (1 -  self.height))
+    local x2 = x1  + self.width - 1
     local y2 = target.pos.y + self.yoffset
 
-    rectfill(x1, y1, x2, y2, 8)
+    rectfill(x1, y1, x2, y2, self.bgcolor)
     if innerwidth > 0 then
-      rectfill(x1, y1, x1 + innerwidth, y2, 12)
+      rectfill(x1, y1, x1 + innerwidth, y2, self.fgcolor)
     end
   end
 
