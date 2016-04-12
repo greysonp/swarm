@@ -267,6 +267,8 @@ function newbeehive(x, y)
   beehive.layer = beehive_layer
   beehive.anim = {16, 17, 18}
   beehive.removable = false
+  beehive.pollen = 0
+  beehive.maxpollen = 10
   beehive.progressbar = newhealthbar(beehive, 9)
 
   beehive.progressbar.bgcolor = 4
@@ -280,7 +282,18 @@ function newbeehive(x, y)
     spr(getsprite(self.anim, 72), self.pos.x - 4, self.pos.y)
     rectfill(self.pos.x - 1, self.pos.y + 6, self.pos.x, self.pos.y + 7, 0)
 
-    self.progressbar:draw(5, 10)
+    -- draw progress bar for bee production
+    if self.pollen > 0 then
+      self.progressbar:draw(self.pollen, self.maxpollen)
+    end
+  end
+
+  function beehive:pollinate()
+    self.pollen = min(self.pollen + 1, self.maxpollen)
+    if self.pollen == self.maxpollen then
+      addbee(newbee(self.pos.x, self.pos.y, self))
+      self.pollen = 0
+    end
   end
 
   return beehive
@@ -629,25 +642,35 @@ function newflower(x, y, sprite)
   flower.health = flower.maxhealth
   flower.healthbar = newhealthbar(flower, 5)
   flower.pollenanimation = {48, 49, 50}
+  flower.pollencount = 0
+  flower.pollenspeed = 30
 
   flower.healthbar.width = 7
   flower.healthbar.xoffset = 1
 
+
   function flower:update()
+    if count(self.bees) > 0 then
+      self.pollencount += 1
+      if self.pollencount > self.pollenspeed then
+        beehive:pollinate()
+        self.pollencount = 0
+      end
+    end
   end
 
   function flower:draw()
     spr(self.sprite, self.pos.x - 2, self.pos.y - 2)
     circ(self.pos.x, self.pos.y, self.radius, 3)
 
-    -- draw the health bar
-    if self.health < self.maxhealth then
-      self.healthbar:draw(self.health, self.maxhealth)
-    end
-
     -- draw pollination if we have bees on us
     if count(self.bees) > 0 then
       spr(getsprite(self.pollenanimation, 30), self.pos.x - 3, self.pos.y)
+    end
+
+    -- draw the health bar
+    if self.health < self.maxhealth then
+      self.healthbar:draw(self.health, self.maxhealth)
     end
   end
 
