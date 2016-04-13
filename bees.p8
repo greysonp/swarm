@@ -27,6 +27,7 @@ hud_layer = cursor_layer + 1
 
 -- other
 time = 0
+screen = 1 -- 0 = title screen, 1 = game, 2 = game over
 
 -- debug elements
 flag = false
@@ -69,6 +70,30 @@ function _init()
 end
 
 function _update()
+  if screen == 0 then
+    _updatetitle()
+  elseif screen == 1 then
+    _updategame()
+  end
+end
+
+function _draw()
+  if screen == 0 then
+    _drawtitle()
+  elseif screen == 1 then
+    _drawgame()
+  end
+
+  if flag then pset(cam.x + 63, cam.y, 8) end
+  if debugtext != nil then
+    print(debugtext, cam.x, cam.y + 59)
+  end
+end
+
+function _updatetitle()
+end
+
+function _updategame()
   time = (time + 1) % 32000
 
   -- clear out all of the cached bee data
@@ -94,10 +119,12 @@ function _update()
   cam.y = min(stageheight - cam.height, cam.y)
 
   camera(cam.x, cam.y)
-
 end
 
-function _draw()
+function _drawtitle()
+end
+
+function _drawgame()
   -- draw map
   map(0, 0, 0, 0, stagewidth/8, stageheight/8)
 
@@ -117,11 +144,6 @@ function _draw()
     for obj in all(layer) do
       obj:draw()
     end
-  end
-
-  if flag then pset(cam.x + 63, cam.y, 8) end
-  if debugtext != nil then
-    print(debugtext, cam.x, cam.y + 59)
   end
 end
 
