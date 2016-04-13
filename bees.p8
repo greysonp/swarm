@@ -43,6 +43,8 @@ function _init()
 
   -- init camera state
   cam = newvector(cursor.pos.x - 32, cursor.pos.y - 32)
+  cam.width = 64
+  cam.height = 64
 
   -- add beehive to the stage
   beehive = newbeehive(stagewidth/2, stageheight/2)
@@ -53,10 +55,8 @@ function _init()
   add(stage, newbeecounter())
 
   -- add flowers to the stage
-  addflower(newflower(32, 32, 32))
-  addflower(newflower(96, 32, 33))
-  addflower(newflower(96, 96, 34))
-  addflower(newflower(32, 96, 35))
+  addflower(newflower(110, 110, 32))
+  addflower(newflower(140, 110, 33))
 
   -- add bees to the stage
   for i = 1, startbees do
@@ -65,7 +65,7 @@ function _init()
   end
 
   -- add an enemy
-  addenemy(newenemy(64, 0))
+  addenemy(newenemy(110, 100))
 end
 
 function _update()
@@ -89,9 +89,9 @@ function _update()
   cam.y = cam.y * (1 - camlag) + adjcursor.y * camlag
 
   cam.x = max(0, cam.x)
-  cam.x = min(stagewidth - 64, cam.x)
+  cam.x = min(stagewidth - cam.width, cam.x)
   cam.y = max(0, cam.y)
-  cam.y = min(stageheight - 64, cam.y)
+  cam.y = min(stageheight - cam.height, cam.y)
 
   camera(cam.x, cam.y)
 
@@ -197,6 +197,14 @@ end
 
 function random(min, max)
   return rnd(max - min) + min
+end
+
+function notoncamera(x, y, width, height)
+  local x1 = cam.x
+  local y1 = cam.y
+  local x2 = cam.x + cam.width
+  local y2 = cam.y + cam.height
+  return (x + width/2) < x1 or (x - width/2) > x2 or (y + height/2) < y1 or (y - height/2) > y2
 end
 
 -- ============================
@@ -533,12 +541,14 @@ function newenemy(x, y)
   enemy.attackspeed = 30
   enemy.walkspeed = 0.25
   enemy.state = 0 -- 0 = normal, 1 = attacking, 2 = running
+  enemy.flower = nil
 
   enemy.healthbar.width = 7
 
   function enemy:update()
     if self.state != 2 then
       self.state = 0
+      self.flower = nil
       self:attackifpossible()
 
       -- if we didn't attack anything, then walk towards a flower
@@ -574,6 +584,39 @@ function newenemy(x, y)
         self.healthbar:draw(enemy.health, enemy.maxhealth)
       end
     end
+
+    -- draw off-screen attack indicator
+    if self.flower != nil and notoncamera(self.flower.pos.x, self.flower.pos.y, 5, 7) then
+      self:drawindicator()
+    end
+  end
+
+  function enemy:drawindicator()
+    local diff = vsub(self.flower.pos, newvector(cam.x + cam.width/2, cam.y + cam.height/2))
+    local sprite = 0
+    local x = 0
+    local y = 0
+    if abs(diff.x) > abs(diff.y) then
+      if diff.x <= 0 then
+        sprite = 128
+        x = cam.x
+      else
+        sprite = 129
+        x = cam.x + cam.width - 3
+      end
+      y = min(max(self.flower.pos.y, cam.y), cam.y + cam.height - 5)
+    else
+      if diff.y <= 0 then
+        sprite = 130
+        y = cam.y
+      else
+        sprite = 131
+        y = cam.y + cam.height - 3
+      end
+      x = min(max(self.flower.pos.x - 2, cam.x), cam.x + cam.width - 5)
+    end
+
+    spr(sprite, x, y)
   end
 
   function enemy:attackifpossible()
@@ -600,6 +643,9 @@ function newenemy(x, y)
       -- sound
       if coll == bees and time % 5 == 0 then
         sfx(chooserandom({4, 5, 6}))
+      end
+      if coll == flowers then
+        self.flower = obj
       end
       return true
     end
@@ -857,13 +903,13 @@ f9044400f904440000048409090444000044409f0044409f00000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000
+00800000800000000080000088888000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+08800000880000000888000008880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+88800000888000008888800000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+08800000880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00800000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -1087,4 +1133,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
