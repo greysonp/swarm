@@ -31,6 +31,7 @@ time = 0
 lives = 0
 score = 0
 screen = 0 -- 0 = title screen, 1 = game, 2 = game over
+gameovertimer = 0
 
 -- debug elements
 flag = false
@@ -76,6 +77,7 @@ function _initgame()
   time = 0
   lives = startlives
   score = 0
+  gameovertimer = 0
 
   -- add cursor to the stage
   cursor = newcursor(115, 115)
@@ -147,7 +149,10 @@ function _updategame()
 end
 
 function _updategameover()
-  if btnp(1) or btnp(2) or btnp(3) or btnp(4) or btnp(5) or btnp(6) then screen = 0 end
+  if gameovertimer > 30 then
+    if btnp(1) or btnp(2) or btnp(3) or btnp(4) or btnp(5) or btnp(6) then screen = 0 end
+  end
+  gameovertimer += 1
 end
 
 function _drawtitle()
