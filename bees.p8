@@ -17,6 +17,7 @@ flowers = {}
 startbees = 10
 stagewidth = 256
 stageheight = 256
+startlives = 2
 camlag = .1 -- constant we use as 't' in low-pass filter calculation
 beehive_layer = 1
 anchor_layer = beehive_layer + 1
@@ -27,7 +28,9 @@ hud_layer = cursor_layer + 1
 
 -- other
 time = 0
-screen = 0 -- 0 = title screen, 1 = game
+lives = 0
+score = 0
+screen = 0 -- 0 = title screen, 1 = game, 2 = game over
 
 -- debug elements
 flag = false
@@ -37,6 +40,42 @@ function _init()
   -- switch to 64x64 mode
   poke(0x5f2c, 3)
   cls()
+end
+
+function _update()
+  if screen == 0 then
+    _updatetitle()
+  elseif screen == 1 then
+    _updategame()
+  elseif screen == 2 then
+    _updategameover()
+  end
+end
+
+function _draw()
+  if screen == 0 then
+    _drawtitle()
+  elseif screen == 1 then
+    _drawgame()
+  elseif screen == 2 then
+    _drawgameover()
+  end
+
+  if flag then pset(cam.x + 63, cam.y, 8) end
+  if debugtext != nil then
+    print(debugtext, cam.x, cam.y + 59)
+  end
+end
+
+function _initgame()
+  -- clear all state
+  stage = {}
+  bees = {}
+  enemies = {}
+  flowers = {}
+  time = 0
+  lives = startlives
+  score = 0
 
   -- add cursor to the stage
   cursor = newcursor(115, 115)
@@ -52,8 +91,9 @@ function _init()
   add(stage, beehive)
   add(anchors, beehive)
 
-  -- add bee counter to the stage
+  -- add hud to the stage
   add(stage, newbeecounter())
+  add(stage, newscore())
 
   -- add flowers to the stage
   addflower(newflower(110, 110, 32))
@@ -66,29 +106,11 @@ function _init()
   end
 end
 
-function _update()
-  if screen == 0 then
-    _updatetitle()
-  elseif screen == 1 then
-    _updategame()
-  end
-end
-
-function _draw()
-  if screen == 0 then
-    _drawtitle()
-  elseif screen == 1 then
-    _drawgame()
-  end
-
-  if flag then pset(cam.x + 63, cam.y, 8) end
-  if debugtext != nil then
-    print(debugtext, cam.x, cam.y + 59)
-  end
-end
-
 function _updatetitle()
-  if btnp(1) or btnp(2) or btnp(3) or btnp(4) or btnp(5) or btnp(6) then screen = 1 end
+  if btnp(1) or btnp(2) or btnp(3) or btnp(4) or btnp(5) or btnp(6) then
+    _initgame()
+    screen = 1
+  end
 end
 
 function _updategame()
@@ -124,7 +146,13 @@ function _updategame()
   end
 end
 
+function _updategameover()
+  if btnp(1) or btnp(2) or btnp(3) or btnp(4) or btnp(5) or btnp(6) then screen = 0 end
+end
+
 function _drawtitle()
+  camera(0, 0)
+
   map(34, 0, 0, 0, 8, 8)
   spr(192, 6, 5, 7, 3)
   spr(32, 5, 30)
@@ -155,6 +183,14 @@ function _drawgame()
       obj:draw()
     end
   end
+end
+
+function _drawgameover()
+  camera(0, 0)
+
+  cls()
+  print('game over', 10, 20, 7)
+  print('score', 9, 35, 7)
 end
 
 function addbee(bee)
@@ -247,6 +283,11 @@ function notoncamera(x, y, width, height)
   local x2 = cam.x + cam.width
   local y2 = cam.y + cam.height
   return (x + width/2) < x1 or (x - width/2) > x2 or (y + height/2) < y1 or (y - height/2) > y2
+end
+
+function getstringwidth(s)
+  local len = #s
+  return 3 * len + len - 1
 end
 
 -- ============================
@@ -580,8 +621,8 @@ function newenemy(x, y)
   enemy.health = enemy.maxhealth
   enemy.healthbar = newhealthbar(enemy, -9)
   enemy.radius = 5
-  enemy.attackspeed = 30
-  enemy.walkspeed = 0.25
+  enemy.attackspeed = 5 -- 30
+  enemy.walkspeed = 5 -- .25
   enemy.state = 0 -- 0 = normal, 1 = attacking, 2 = running
   enemy.flower = nil
 
@@ -696,11 +737,15 @@ function newenemy(x, y)
 
   function enemy:targetflower()
     local flower = findclosest(flowers, self.pos.x, self.pos.y, function(obj, dist) return true end)
-    local diff = vsub(flower.pos, self.pos)
-    local rads = atan2(diff.x, diff.y)
 
-    self.vel.x = cos(rads) * self.walkspeed
-    self.vel.y = sin(rads) * self.walkspeed
+    -- flower will be nil during final update() call before game over
+    if flower != nil then
+      local diff = vsub(flower.pos, self.pos)
+      local rads = atan2(diff.x, diff.y)
+
+      self.vel.x = cos(rads) * self.walkspeed
+      self.vel.y = sin(rads) * self.walkspeed
+    end
   end
 
   function enemy:sethealth(health)
@@ -761,6 +806,10 @@ function newflower(x, y, sprite)
       del(flowers, self)
       del(anchors, self)
       del(stage, self)
+      lives -= 1
+      if lives <= 0 then
+        screen = 2
+      end
     end
   end
 
@@ -768,20 +817,35 @@ function newflower(x, y, sprite)
 end
 
 function newbeecounter()
-  local counter = newgameobj()
-  counter.pos.x = 1
-  counter.pos.y = 1
-  counter.layer = hud_layer
+  local beecounter = newgameobj()
+  beecounter.layer = hud_layer
 
-  function counter:update()
+  function beecounter:update()
   end
 
-  function counter:draw()
+  function beecounter:draw()
     -- we have to get the cam position here because the camera is adjusted during the draw call
-    print(count(cursor.bees) .. '/' .. count(bees), cam.x + 1, cam.y + 1, 7)
+    local message = count(cursor.bees) .. '/' .. count(bees)
+    print(message, cam.x + cam.width - getstringwidth(message) - 1, cam.y + 1, 7)
   end
 
-  return counter
+  return beecounter
+end
+
+function newscore()
+  local scorecounter = newgameobj()
+  scorecounter.layer = hud_layer
+
+  function scorecounter:update()
+    if time % 30 == 0 then score += 1 end
+  end
+
+  function scorecounter:draw()
+    -- we have to get the cam position here because the camera is adjusted during the draw call
+    print('scr:' .. score, cam.x + 1, cam.y + 1, 7)
+  end
+
+  return scorecounter
 end
 
 function newhealthbar(target, yoffset)
@@ -1175,4 +1239,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
