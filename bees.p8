@@ -194,8 +194,8 @@ function _drawgameover()
   camera(0, 0)
 
   cls()
-  print('game over', 10, 20, 7)
-  print('score', 9, 35, 7)
+  printcenter('game over', 20, 7)
+  printcenter('score: ' .. score, 35, 7)
 end
 
 function addbee(bee)
@@ -293,6 +293,11 @@ end
 function getstringwidth(s)
   local len = #s
   return 3 * len + len - 1
+end
+
+function printcenter(s, y, color)
+  local width = getstringwidth(s)
+  print(s, cam.width/2 - width/2, y, color)
 end
 
 -- ============================
