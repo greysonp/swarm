@@ -252,7 +252,7 @@ function spawnenemy()
 end
 
 function spawnflower()
-  local padding = 30
+  local padding = 50
 
   local flower = newflower(0, 0, flr(random(32, 36)))
   flower.pos.x = random(padding, stagewidth - padding)
