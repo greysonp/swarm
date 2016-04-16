@@ -108,7 +108,7 @@ function _initgame()
   add(stage, newscore())
 
   -- add flowers to the stage
-  addflower(newflower(110, 110, 32))
+  addflower(newflower(110, 110, flr(random(32, 36))))
 
   -- add bees to the stage
   for i = 1, startbees do
@@ -153,7 +153,7 @@ function _updategame()
 
   -- spawn enemies
   if not beehive.isfirst then
-    spawntimermax = max(spawntimermaxorig - score, spawntimermin)
+    spawntimermax = max(spawntimermaxorig - score - count(bees), spawntimermin)
     spawntimer += 1
     if spawntimer > spawntimermax then
       spawnenemy()
@@ -257,14 +257,17 @@ function spawnflower()
   local flower = newflower(0, 0, flr(random(32, 36)))
   flower.pos.x = random(padding, stagewidth - padding)
   flower.pos.y = random(padding, stagewidth - padding)
+  local disttohive = vsub(flower.pos, beehive.pos):mag()
 
   -- ensure the flower is not placed too closely to any other flower
   local trycount = 0
-  while trycount < 5 and findclosest(flowers, flower.pos.x, flower.pos.y, function(obj, dist)
+  while trycount < 10 and (disttohive < 50 or findclosest(flowers, flower.pos.x, flower.pos.y, function(obj, dist)
     return dist < flower.radius * 3
-  end) != nil do
+  end) != nil) do
     flower.pos.x = random(padding, stagewidth - padding)
     flower.pos.y = random(padding, stagewidth - padding)
+
+    disttohive = vsub(flower.pos, beehive.pos):mag()
     trycount += 1
   end
 
@@ -1355,4 +1358,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
