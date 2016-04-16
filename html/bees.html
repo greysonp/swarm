@@ -8,38 +8,46 @@
 <STYLE TYPE="text/css">
 <!--
 
-canvas#canvas { width: 580px; height: 540px; }
+  canvas#canvas { width: 580px; height: 540px; }
 
-.pico8_el {
-	float:left;
-	width:105px;
-	display:inline-block; 
-  	margin: 1px;
-	padding: 4px;
-	text-align: center;
-	color:#fff;
-	background-color:#777;
-	font-family : verdana;
-	font-size: 9pt;
-	cursor: pointer;
-	cursor: hand;
-}
-.pico8_el a{
-	text-decoration: none;
-	color:#fff;
-}
+  .pico8_el {
+  	float:left;
+  	width:105px;
+  	display:inline-block;
+    	margin: 1px;
+  	padding: 4px;
+  	text-align: center;
+  	color:#fff;
+  	background-color:#777;
+  	font-family : verdana;
+  	font-size: 9pt;
+  	cursor: pointer;
+  	cursor: hand;
+  }
+  .pico8_el a{
+  	text-decoration: none;
+  	color:#fff;
+  }
 
-.pico8_el:hover{
-	background-color:#aaa;
-}
+  .pico8_el:hover{
+  	background-color:#aaa;
+  }
 
-.pico8_el:link{
-	background-color:#aaa;
-}
+  .pico8_el:link{
+  	background-color:#aaa;
+  }
+
+  .instructions {
+    width: 580px;
+    padding: 20px;
+    color: white;
+    font-family: arial, sans-serif;
+    text-align: left;
+  }
 
 -->
 </STYLE>
-    
+
 </head>
 
 <body bgcolor=#303030>
@@ -57,26 +65,26 @@ canvas#canvas { width: 580px; height: 540px; }
 
 		// show Emscripten environment where the canvas is
 		// arguments are passed to PICO-8
-		
+
 		var Module = {
 			arguments: ["-width","580","-height","540"],
 		};
 		Module.canvas = canvas;
-		
+
 		/*
 			// When pico8_buttons is defined, PICO-8 takes each int to be a live bitfield
 			// representing the state of each player's buttons
-			
+
 			var pico8_buttons = [0, 0, 0, 0, 0, 0, 0, 0]; // max 8 players
 			pico8_buttons[0] = 2 | 16; // example: player 0, RIGHT and Z held down
 		*/
 	</script>
 
 	<script async type="text/javascript" src="bees.js"></script>
-	  
+
 	<script>
 		// key blocker. prevent cursor keys from scrolling page while playing cart.
-		
+
 		function onKeyDown_blocker(event) {
 			event = event || window.event;
 			var o = document.activeElement;
@@ -92,7 +100,7 @@ canvas#canvas { width: 580px; height: 540px; }
 		document.addEventListener('keydown', onKeyDown_blocker, false);
 
 	</script>
-        
+
 	<br>
 
 	<div class=pico8_el onclick="Module.pico8Reset();">
@@ -112,18 +120,50 @@ canvas#canvas { width: 580px; height: 540px; }
 	Fullscreen</div>
 	<div class=pico8_el onclick="Module.pico8ToggleSound();">
 	<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAXklEQVR4Ae2doQ4AIQxD4YLH8v9fh+ULhjpxxSwLg2uyapr1JRu1iV5Z+1BGl4+xNpX38SYo2uRvYiT5LwEmt+ocgXVLrhPEgBiw8Q5w7/kueSkK+D2tJO4E/I3GrwkqQCBabEj/4QAAABB0RVh0TG9kZVBORwAyMDExMDIyMeNZtsEAAAAASUVORK5CYII=" alt="Toggle Sound" width=12 height=12/>
-	
+
 	Sound</div>
 	<div class=pico8_el ><a target="_new" href="http://www.lexaloffle.com/bbs/?cat=7&sub=2">
 	<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAlElEQVR4Ae2dMQ5FQBCGh6jcwAkkateg3DiAa+iQUGqVKi95FQfAJRQOoHeBUf8JyQqKjZ1uMzuz2e/LTE3KhyF7kSlgLOykas23f6D+A9Yp84aAOYU15pcJnfji0Il2ID8HzC4y38ZrnfIBGxeRoR3c3EWrACdsV5BOsx7OSRnrOXh4F5HzA6bevwUn8wlz7eCDsQM99B3ks0s/4QAAABB0RVh0TG9kZVBORwAyMDExMDIyMeNZtsEAAAAASUVORK5CYII=" alt="More Carts" width=12 height=12/>
 
 	Carts</a></div>
 
-	<br>	
+	<br>
 
-	</div></center>
+	</div>
+
+  <div class="instructions">
+    <p>In Swarm, you control a swarm of bees to pollinate and protect your flowers.</p>
+
+    <p>
+      To start the game, pick up the bees at the bee hive. Enemy foxes will come from all directions to try to attack
+      your bees. Defend your flowers placing bees on or around them. If you lose 3 flowers, the game is over! Your score
+      is equal to how many seconds you lasted.
+    </p>
+
+    <p>
+      You can produce more bees at your bee hive by pollinating the flowers. A flower is considered "pollinated" if
+      there is at least bee on it. The more flowers that are pollinated, the faster you will produce bees. The number
+      of bees on particular flower does not matter - 1 is the same as 100!
+    </p>
+
+    <p>
+      To aid in your map awareness, indicators of different colors will point to your flowers. The color indicates the
+      state of the flower.
+    </p>
+
+    Green: The flower is fine. <br />
+    Orange: The bees stationed at the flower are attacking enemies. <br />
+    Red: The flower has no more bees defending it and is taking damage. <br />
+
+    </thead>
+
+    <h3>Controls</h3>
+    Arrow Keys: Move your cursor. <br />
+    Z (btn1): Place a bee at an anchor point. <br />
+    C (btn2): Pick up all the bees at an anchor point. <br />
+  </div>
+
+  </center>
 	<br><br>
 
 </body></html>
-
-
