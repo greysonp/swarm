@@ -717,7 +717,7 @@ function newenemy(x, y, sprite)
   enemy.walkanim = {sprite, sprite + 1}
   enemy.attackanim = {sprite + 2, sprite + 3}
   enemy.runanim = {sprite + 4, sprite + 5}
-  enemy.maxhealth = 80
+  enemy.maxhealth = 100
   enemy.health = enemy.maxhealth
   enemy.healthbar = newhealthbar(enemy, -9)
   enemy.radius = 5
@@ -774,15 +774,19 @@ function newenemy(x, y, sprite)
   end
 
   function enemy:attackifpossible()
+    local attacked = false
+
     -- try to attack a bee first (optimization: only examine bees at the closest anchor)
+    add(anchors, cursor)
     local anchor = findclosest(anchors, self.pos.x, self.pos.y, function(obj, dist)
       return dist < obj.radius
     end)
-    if anchor != nil then
-      self:attack(anchor.bees)
-    else
+    if anchor != nil and count(anchor.bees) > 0 then
+      attacked = self:attack(anchor.bees)
+    elseif not attacked then
       self:attack(flowers)
     end
+    del(anchors, cursor)
   end
 
   function enemy:attack(coll)
