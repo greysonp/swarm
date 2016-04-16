@@ -488,7 +488,7 @@ function newbeehive(x, y)
     -- draw pick-up hint if it's the first time the player is picking up bees
     if self.isfirst then
       print('btn2 to', self.pos.x - 13, self.pos.y + 9, 7)
-      print('pick up', self.pos.x - 13, self.pos.y + 15, 7)
+      print('get bees', self.pos.x - 15, self.pos.y + 15, 7)
     end
   end
 
@@ -1358,4 +1358,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
