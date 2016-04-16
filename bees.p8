@@ -41,6 +41,8 @@ function _init()
   -- switch to 64x64 mode
   poke(0x5f2c, 3)
   cls()
+
+  cam = {}
 end
 
 function _update()
@@ -159,6 +161,8 @@ function _updategameover()
 end
 
 function _drawtitle()
+  cam.x = 0
+  cam.y = 0
   camera(0, 0)
 
   map(34, 0, 0, 0, 8, 8)
@@ -194,6 +198,8 @@ function _drawgame()
 end
 
 function _drawgameover()
+  cam.x = 0
+  cam.y = 0
   camera(0, 0)
 
   cls()
@@ -295,12 +301,12 @@ end
 
 function getstringwidth(s)
   local len = #s
-  return 3 * len + len - 1
+  return 4 * len - 1
 end
 
 function printcenter(s, y, color)
   local width = getstringwidth(s)
-  print(s, cam.width/2 - width/2, y, color)
+  print(s, cam.x + cam.width/2 - flr(width/2), y, color)
 end
 
 function drawindicator(target, top, bottom, left, right)
@@ -883,7 +889,7 @@ function newscore()
 
   function scorecounter:draw()
     -- we have to get the cam position here because the camera is adjusted during the draw call
-    print('scr:' .. score, cam.x + 1, cam.y + 1, 7)
+    printcenter(score .. '', cam.y + cam.height - 6, 7)
   end
 
   return scorecounter
