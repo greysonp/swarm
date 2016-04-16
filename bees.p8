@@ -73,6 +73,7 @@ function _initgame()
   stage = {}
   bees = {}
   enemies = {}
+  anchors = {}
   flowers = {}
   time = 0
   lives = startlives
