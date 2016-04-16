@@ -17,7 +17,7 @@ flowers = {}
 startbees = 10
 stagewidth = 256
 stageheight = 256
-startlives = 2
+startlives = 3
 camlag = .1 -- constant we use as 't' in low-pass filter calculation
 beehive_layer = 1
 anchor_layer = beehive_layer + 1
@@ -102,6 +102,7 @@ function _initgame()
   -- add flowers to the stage
   addflower(newflower(110, 110, 32))
   addflower(newflower(140, 110, 33))
+  addflower(newflower(170, 110, 34))
 
   -- add bees to the stage
   for i = 1, startbees do
@@ -661,8 +662,8 @@ function newenemy(x, y)
   enemy.health = enemy.maxhealth
   enemy.healthbar = newhealthbar(enemy, -9)
   enemy.radius = 5
-  enemy.attackspeed = 30 -- 30
-  enemy.walkspeed = 5 -- .25
+  enemy.attackspeed = 30
+  enemy.walkspeed = .25
   enemy.state = 0 -- 0 = normal, 1 = attacking, 2 = running
   enemy.flower = nil
 
@@ -777,13 +778,12 @@ function newflower(x, y, sprite)
   flower.maxhealth = 20
   flower.health = flower.maxhealth
   flower.healthbar = newhealthbar(flower, 5)
+  flower.healthbar.width = 7
+  flower.healthbar.xoffset = 1
   flower.pollenanimation = {48, 49, 50}
   flower.pollencount = 0
   flower.pollenspeed = 30
-
-  flower.healthbar.width = 7
-  flower.healthbar.xoffset = 1
-
+  flower.isfresh = true
 
   function flower:update()
     self:superupdate()
@@ -794,6 +794,10 @@ function newflower(x, y, sprite)
         beehive:pollinate()
         self.pollencount = 0
       end
+    end
+
+    if self.isfresh and not notoncamera(self.pos.x, self.pos.y, 5, 7) then
+      self.isfresh = false
     end
   end
 
@@ -809,6 +813,11 @@ function newflower(x, y, sprite)
     -- draw the health bar
     if self.health < self.maxhealth then
       self.healthbar:draw(self.health, self.maxhealth)
+    end
+
+    -- draw indicator
+    if self.isfresh then
+      drawindicator(self, 146, 147, 144, 145)
     end
   end
 
