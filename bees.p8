@@ -774,9 +774,13 @@ function newenemy(x, y, sprite)
   end
 
   function enemy:attackifpossible()
-    -- try to attack a bee first
-    local attacked = self:attack(bees)
-    if not attacked then
+    -- try to attack a bee first (optimization: only examine bees at the closest anchor)
+    local anchor = findclosest(anchors, self.pos.x, self.pos.y, function(obj, dist)
+      return dist < obj.radius
+    end)
+    if anchor != nil then
+      self:attack(anchor.bees)
+    else
       self:attack(flowers)
     end
   end
@@ -795,7 +799,7 @@ function newenemy(x, y, sprite)
       self.state = 1
 
       -- sound
-      if coll == bees and time % 5 == 0 then
+      if coll != flowers and time % 5 == 0 then
         sfx(chooserandom({4, 5, 6}))
       end
       return true
