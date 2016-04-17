@@ -14,6 +14,12 @@ anchors = {}
 flowers = {}
 
 -- constants
+btn_left = 0
+btn_right = 1
+btn_up = 2
+btn_down = 3
+btn_1 = 4
+btn_2 = 5
 fps = 30
 startbees = 10
 stagewidth = 256
@@ -36,7 +42,7 @@ screen = 0 -- 0 = title screen, 1 = game, 2 = game over
 gameovertimer = 0
 spawntimermaxorig = 10 * fps
 spawntimermax = spawntimermaxorig
-spawntimermin = 2 * fps
+spawntimermin = 2.5 * fps
 spawntimer = spawntimermax -- init to max so we'll spawn right away when the game starts
 
 -- debug elements
@@ -391,7 +397,8 @@ end
 
 function newcursor(x, y)
   local cursor = newanchor(x, y)
-  cursor.speed = 1
+  cursor.speed = 1.25
+  cursor.diagspeed = cos(1/8) * cursor.speed -- in pico, 1 is a full circle
   cursor.radius = 10
   cursor.layer = cursor_layer
   cursor.removable = false
@@ -402,13 +409,41 @@ function newcursor(x, y)
     -- movement
     self.vel.x = 0
     self.vel.y = 0
-    if btn(0) then self.vel.x = -self.speed end
-    if btn(1) then self.vel.x = self.speed end
-    if btn(2) then self.vel.y = -self.speed end
-    if btn(3) then self.vel.y = self.speed end
+
+    if btn(btn_up) then
+      if btn(btn_left) then
+        self.vel.x = -self.diagspeed
+        self.vel.y = -self.diagspeed
+      elseif btn(btn_right) then
+        self.vel.x = self.diagspeed
+        self.vel.y = -self.diagspeed
+      elseif btn(btn_down) then
+        self.vel.x = 0
+        self.vel.y = 0
+      else
+        self.vel.y = -self.speed
+      end
+    elseif btn(btn_down) then
+      if btn(btn_left) then
+        self.vel.x = -self.diagspeed
+        self.vel.y = self.diagspeed
+      elseif btn(btn_right) then
+        self.vel.x = self.diagspeed
+        self.vel.y = self.diagspeed
+      elseif btn(btn_up) then
+        self.vel.x = 0
+        self.vel.y = 0
+      else
+        self.vel.y = self.speed
+      end
+    elseif btn(btn_left) and not btn(btn_right) then
+      self.vel.x = -self.speed
+    elseif btn(btn_right) and not btn(btn_left) then
+      self.vel.x = self.speed
+    end
 
     -- add anchor
-    if btnp(4) then
+    if btnp(btn_1) then
       if count(self.bees) > 0 then
         local anchor = findclosest(anchors, self.pos.x, self.pos.y, function(obj, dist)
           return dist < obj.radius
@@ -426,7 +461,7 @@ function newcursor(x, y)
     end
 
     -- remove anchor
-    if btnp(5) then
+    if btnp(btn_2) then
       local anchor = removeanchor(self.pos.x, self.pos.y)
       if anchor != nil then
         if count(anchor.bees) > 0 then sfx(3) else sfx(0) end
@@ -537,9 +572,11 @@ function newbee(x, y, anchor)
   bee.targetelevation = random(bee.minelevation, bee.maxelevation)
   bee.anchor = anchor
   bee.layer = bee_layer
-  bee.attackspeed = 10
   bee.health = 3
   bee.closestbee = nil
+  bee.attacktimer = 0
+  bee.attacktimermax = 10
+
 
   function bee:update()
     -- calculate the closest bee once for use by all future functions
@@ -696,8 +733,10 @@ function newbee(x, y, anchor)
   function bee:attack()
     local enemy = self.anchor.closestenemy
 
-    if enemy != nil and time % self.attackspeed == 0 then
+    self.attacktimer += 1
+    if enemy != nil and self.attacktimer >= self.attacktimermax then
       enemy:sethealth(enemy.health - 1)
+      self.attacktimer = 0
     end
   end
 
@@ -712,7 +751,7 @@ function newenemy(x, y, sprite)
   enemy.walkanim = {sprite, sprite + 1}
   enemy.attackanim = {sprite + 2, sprite + 3}
   enemy.runanim = {sprite + 4, sprite + 5}
-  enemy.maxhealth = 100
+  enemy.maxhealth = 90
   enemy.health = enemy.maxhealth
   enemy.healthbar = newhealthbar(enemy, -9)
   enemy.radius = 5
@@ -774,9 +813,9 @@ function newenemy(x, y, sprite)
     -- try to attack a bee first (optimization: only examine bees at the closest anchor)
     add(anchors, cursor)
     local anchor = findclosest(anchors, self.pos.x, self.pos.y, function(obj, dist)
-      return dist <= obj.radius
+      return dist <= obj.radius and count(obj.bees) > 0
     end)
-    if anchor != nil and count(anchor.bees) > 0 then
+    if anchor != nil then
       attacked = self:attack(anchor.bees)
     elseif not attacked then
       self:attack(flowers)
@@ -785,9 +824,14 @@ function newenemy(x, y, sprite)
   end
 
   function enemy:attack(coll)
-    local obj = findclosest(coll, self.pos.x, self.pos.y, function(obj, dist)
-      return dist <= self.radius
-    end)
+    local obj = nil
+    if coll == bees then
+      obj = bees[flr(random(1, count(bees) + 1))]
+    else
+      obj = findclosest(coll, self.pos.x, self.pos.y, function(obj, dist)
+        return dist <= self.radius
+      end)
+    end
 
     if obj != nil then
       if time % self.attackspeed == 0 then
