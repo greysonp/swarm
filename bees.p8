@@ -281,20 +281,6 @@ function addflower(flower)
   add(stage, flower)
 end
 
-function placeanchor(x, y)
-  local closest = findclosest(anchors, x, y, function(obj, dist)
-    return dist <= obj.radius
-  end)
-  if closest == nil then
-    closest = newanchor(x, y)
-    add(anchors, closest)
-    add(stage, closest)
-    sfx(1)
-  end
-
-  return closest
-end
-
 function removeanchor(x, y)
   local closest = findclosest(anchors, x, y, function(obj, dist)
     return dist <= obj.radius
@@ -424,10 +410,16 @@ function newcursor(x, y)
     -- add anchor
     if btnp(4) then
       if count(self.bees) > 0 then
-        local anchor = placeanchor(self.pos.x, self.pos.y)
-        local bee = findclosest(self.bees, self.pos.x, self.pos.y, function(obj, dist) return true end)
-        bee:setanchor(anchor)
-        if count(anchor.bees) > 1 or not anchor.removable then sfx(2) end
+        local anchor = findclosest(anchors, self.pos.x, self.pos.y, function(obj, dist)
+          return dist < obj.radius
+        end)
+        if anchor != nil then
+          local bee = findclosest(self.bees, self.pos.x, self.pos.y, function(obj, dist) return true end)
+          bee:setanchor(anchor)
+          if count(anchor.bees) > 1 or not anchor.removable then sfx(2) end
+        else
+          sfx(0)
+        end
       else
         sfx(0)
       end
@@ -782,7 +774,7 @@ function newenemy(x, y, sprite)
     -- try to attack a bee first (optimization: only examine bees at the closest anchor)
     add(anchors, cursor)
     local anchor = findclosest(anchors, self.pos.x, self.pos.y, function(obj, dist)
-      return dist < obj.radius
+      return dist <= obj.radius
     end)
     if anchor != nil and count(anchor.bees) > 0 then
       attacked = self:attack(anchor.bees)
